@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account information",
+      "type": "object",
+      "properties": {
+        "mobile": {
+          "type": "string",
+          "pattern": "^01[3-9][0-9]{8}$",
+          "description": "Bangladeshi 11-digit mobile number"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user"],
+          "description": "User role"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["mobile", "role", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin identity and access",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["email"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User CV and profile conforming to Teletalk requirements",
+      "type": "object",
+      "properties": {
+        "schemaVersion": { "type": "number" },
+        "data": { "type": "object" },
+        "presentDistrict": { "type": "string" },
+        "permanentDistrict": { "type": "string" },
+        "mobile": { "type": "string" },
+        "photoPath": { "type": "string" },
+        "signaturePath": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["schemaVersion", "data", "updatedAt"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Job post and circular information",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "category": { "type": "string" },
+        "content": { "type": "string" },
+        "deadline": { "type": "string" },
+        "applyLink": { "type": "string" },
+        "applyServiceEnabled": { "type": "boolean" },
+        "applicationFee": { "type": "number" },
+        "serviceCharge": { "type": "number" },
+        "posts": { "type": "array" },
+        "status": { "type": "string", "enum": ["draft", "published", "scheduled"] },
+        "publishedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "slug", "category", "status", "createdAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "User job application record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "mobile": { "type": "string" },
+        "fullName": { "type": "string" },
+        "jobId": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "postName": { "type": "string" },
+        "postCount": { "type": "number" },
+        "district": { "type": "string" },
+        "educationLevel": { "type": "string" },
+        "smsNumber": { "type": "string" },
+        "termsAccepted": { "type": "boolean" },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "apply_now", "checking", "payment_now", "applied", "rejected", "correction"]
+        },
+        "fee": { "type": "object" },
+        "payment": { "type": "object" },
+        "softCopyPath": { "type": "string" },
+        "paidCopyPath": { "type": "string" },
+        "correctionNote": { "type": "string" },
+        "rejectReason": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "mobile", "fullName", "jobId", "postName", "status", "termsAccepted", "fee", "payment", "createdAt"]
+    },
+    "TrxId": {
+      "title": "TrxId",
+      "description": "Unique transaction ID tracking record",
+      "type": "object",
+      "properties": {
+        "appId": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["appId", "uid", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "appId": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "title", "body", "read", "createdAt"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "System settings such as payment information",
+      "type": "object",
+      "properties": {
+        "bkashNumber": { "type": "string" },
+        "rocketNumber": { "type": "string" },
+        "instructions": { "type": "string" },
+        "whatsappNumber": { "type": "string" }
+      }
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "Exam schedule and result notices",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profile metadata"
+    },
+    "/admins/{uid}": {
+      "schema": "Admin",
+      "description": "Administrator registry"
+    },
+    "/profiles/{uid}": {
+      "schema": "Profile",
+      "description": "Full candidate CV details"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job circulars"
+    },
+    "/applications/{appId}": {
+      "schema": "Application",
+      "description": "Submitted job applications"
+    },
+    "/trxIds/{trxId}": {
+      "schema": "TrxId",
+      "description": "Unique transaction IDs to avoid double-spend"
+    },
+    "/notifications/{id}": {
+      "schema": "Notification",
+      "description": "Candidate notifications"
+    },
+    "/settings/{id}": {
+      "schema": "Setting",
+      "description": "Global application settings"
+    },
+    "/exams/{id}": {
+      "schema": "Exam",
+      "description": "Exam and result notices"
+    }
+  }
+}

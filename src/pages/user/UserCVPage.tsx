@@ -1,0 +1,323 @@
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { db, storage, handleFirestoreError, OperationType } from '../../services/firebase';
+import { CandidateProfile, ProfileData } from '../../types';
+import { PersonalInfoSection } from '../../components/cv/PersonalInfoSection';
+import { IdentitySection } from '../../components/cv/IdentitySection';
+import { ContactAddressSection } from '../../components/cv/ContactAddressSection';
+import { EducationSection } from '../../components/cv/EducationSection';
+import { ExperienceSection } from '../../components/cv/ExperienceSection';
+import { MediaUploadSection } from '../../components/cv/MediaUploadSection';
+import { CVHeaderCard } from '../../components/cv/CVHeaderCard';
+import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
+import { Spinner } from '../../components/common/Spinner';
+import { useToast } from '../../components/common/Toast';
+import { calculateCVCompleteness, generateDegreeString } from '../../utils/cvValidation';
+import { Save, AlertTriangle, ShieldCheck } from 'lucide-react';
+
+export const UserCVPage: React.FC = () => {
+  const { user, mobile } = useAuth();
+  const [formData, setFormData] = useState<Partial<ProfileData>>({});
+  const [photoPath, setPhotoPath] = useState<string>('');
+  const [signaturePath, setSignaturePath] = useState<string>('');
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [signatureUrl, setSignatureUrl] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { success, error } = useToast();
+
+  useEffect(() => {
+    if (!user) return;
+    const loadProfile = async () => {
+      try {
+        const docRef = doc(db, 'profiles', user.uid);
+        const snap = await getDoc(docRef);
+
+        if (snap.exists()) {
+          const profile = snap.data() as CandidateProfile;
+          setFormData(profile.data || {});
+          setPhotoPath(profile.photoPath || '');
+          setSignaturePath(profile.signaturePath || '');
+
+          if (profile.photoUrl) {
+            setPhotoUrl(profile.photoUrl);
+          } else if (profile.photoPath) {
+            try {
+              const url = await getDownloadURL(ref(storage, profile.photoPath));
+              setPhotoUrl(url);
+            } catch (e) {
+              // Ignore fallback warning
+            }
+          }
+
+          if (profile.signatureUrl) {
+            setSignatureUrl(profile.signatureUrl);
+          } else if (profile.signaturePath) {
+            try {
+              const url = await getDownloadURL(ref(storage, profile.signaturePath));
+              setSignatureUrl(url);
+            } catch (e) {
+              // Ignore fallback warning
+            }
+          }
+        } else {
+          setFormData({
+            mobile: mobile || '',
+            mobileConfirm: mobile || '',
+            nationality: 'Bangladeshi',
+            nidType: 'Yes',
+            quota: 'Non Quota',
+          });
+        }
+      } catch (err) {
+        // Handled silently
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user, mobile]);
+
+  const handleFieldChange = (field: keyof ProfileData, val: any) => {
+    setFormData((prev) => ({ ...prev, [field]: val }));
+  };
+
+  const handleMultipleChange = (updates: Partial<ProfileData>) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const completeness = calculateCVCompleteness(formData, Boolean(photoUrl), Boolean(signatureUrl));
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    try {
+      const bachelorString = generateDegreeString(
+        formData.graExam,
+        formData.graSubject,
+        formData.graInstitute,
+        formData.graYear,
+        formData.graResult
+      );
+
+      const masterString = generateDegreeString(
+        formData.masExam,
+        formData.masSubject,
+        formData.masInstitute,
+        formData.masYear,
+        formData.masResult
+      );
+
+      const finalData: ProfileData = {
+        name: formData.fullName || '',
+        fullName: formData.fullName || '',
+        nameBn: formData.nameBn || '',
+        fatherName: formData.fatherName || '',
+        fatherBn: formData.fatherBn || '',
+        motherName: formData.motherName || '',
+        motherBn: formData.motherBn || '',
+        dateOfBirth: formData.dateOfBirth || '',
+        gender: formData.gender || '',
+        nationality: formData.nationality || 'Bangladeshi',
+        religion: formData.religion || '',
+        maritalStatus: formData.maritalStatus || '',
+        spouseName: formData.spouseName || '',
+        bloodGroup: formData.bloodGroup || '',
+        nidType: formData.nidType || 'Yes',
+        nidNo: formData.nidNo || '',
+        birthRegNo: formData.birthRegNo || '',
+        passportNo: formData.passportNo || '',
+        mobile: formData.mobile || '',
+        mobileConfirm: formData.mobileConfirm || '',
+        email: formData.email || '',
+        quota: formData.quota || 'Non Quota',
+        quotaDetails: formData.quotaDetails || '',
+        depStatus: formData.depStatus || '',
+        presentCareOf: formData.presentCareOf || '',
+        presentAddress: formData.presentAddress || '',
+        presentDistrict: formData.presentDistrict || '',
+        presentUpazila: formData.presentUpazila || '',
+        presentPost: formData.presentPost || '',
+        presentPostcode: formData.presentPostcode || '',
+        permanentCareOf: formData.permanentCareOf || '',
+        permanentAddress: formData.permanentAddress || '',
+        permanentDistrict: formData.permanentDistrict || '',
+        permanentUpazila: formData.permanentUpazila || '',
+        permanentPost: formData.permanentPost || '',
+        permanentPostcode: formData.permanentPostcode || '',
+        sameAsPresent: Boolean(formData.sameAsPresent),
+        fatherOccupation: formData.fatherOccupation || '',
+        sscExam: formData.sscExam || '',
+        sscRoll: formData.sscRoll || '',
+        sscGroup: formData.sscGroup || '',
+        sscGroupOther: formData.sscGroupOther || '',
+        sscBoard: formData.sscBoard || '',
+        sscBoardOther: formData.sscBoardOther || '',
+        sscResultType: formData.sscResultType || '',
+        sscResult: formData.sscResult || '',
+        sscYear: formData.sscYear || '',
+        hscExam: formData.hscExam || '',
+        hscRoll: formData.hscRoll || '',
+        hscGroup: formData.hscGroup || '',
+        hscGroupOther: formData.hscGroupOther || '',
+        hscBoard: formData.hscBoard || '',
+        hscBoardOther: formData.hscBoardOther || '',
+        hscResultType: formData.hscResultType || '',
+        hscResult: formData.hscResult || '',
+        hscYear: formData.hscYear || '',
+        graExam: formData.graExam || '',
+        graInstitute: formData.graInstitute || '',
+        graSubject: formData.graSubject || '',
+        graResultType: formData.graResultType || '',
+        graResult: formData.graResult || '',
+        graYear: formData.graYear || '',
+        graDuration: formData.graDuration || '',
+        masExam: formData.masExam || '',
+        masInstitute: formData.masInstitute || '',
+        masSubject: formData.masSubject || '',
+        masResultType: formData.masResultType || '',
+        masResult: formData.masResult || '',
+        masYear: formData.masYear || '',
+        masDuration: formData.masDuration || '',
+        bachelor: bachelorString,
+        master: masterString,
+        experienceComputer: formData.experienceComputer || 'No',
+        experienceSatlipi: formData.experienceSatlipi || 'No',
+        customFields: formData.customFields || [],
+      };
+
+      const profilePayload: CandidateProfile = {
+        schemaVersion: 1,
+        data: finalData,
+        presentDistrict: finalData.presentDistrict,
+        permanentDistrict: finalData.permanentDistrict,
+        mobile: finalData.mobile,
+        photoPath: photoPath || undefined,
+        signaturePath: signaturePath || undefined,
+        photoUrl: photoUrl || undefined,
+        signatureUrl: signatureUrl || undefined,
+        updatedAt: serverTimestamp(),
+      };
+
+      await setDoc(doc(db, 'profiles', user.uid), profilePayload);
+      success('সিভি সফলভাবে সংরক্ষিত হয়েছে!');
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, `profiles/${user.uid}`);
+      error('সিভি সংরক্ষণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'profiles', user.uid));
+      setFormData({
+        mobile: mobile || '',
+        nationality: 'Bangladeshi',
+        nidType: 'Yes',
+        quota: 'Non Quota',
+      });
+      setPhotoUrl('');
+      setSignatureUrl('');
+      setPhotoPath('');
+      setSignaturePath('');
+      setDeleteModalOpen(false);
+      success('আপনার সিভি মুছে ফেলা হয়েছে।');
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, `profiles/${user.uid}`);
+      error('সিভি মুছে ফেলা সম্ভব হয়নি।');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-24 flex justify-center">
+        <Spinner size="lg" text="আপনার সিভি লোড হচ্ছে..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <CVHeaderCard
+        completeness={completeness}
+        saving={saving}
+        onSave={handleSave}
+        onOpenDeleteModal={() => setDeleteModalOpen(true)}
+      />
+
+      <PersonalInfoSection formData={formData} onChange={handleFieldChange} />
+      <IdentitySection formData={formData} onChange={handleFieldChange} />
+      <ContactAddressSection
+        formData={formData}
+        onChange={handleFieldChange}
+        onMultipleChange={handleMultipleChange}
+      />
+      <EducationSection formData={formData} onChange={handleFieldChange} />
+      <ExperienceSection formData={formData} onChange={handleFieldChange} />
+      <MediaUploadSection
+        uid={user?.uid || ''}
+        photoUrl={photoUrl}
+        signatureUrl={signatureUrl}
+        onPhotoUploaded={(path, url) => {
+          setPhotoPath(path);
+          setPhotoUrl(url);
+          success('ছবি সফলভাবে আপলোড হয়েছে!');
+        }}
+        onSignatureUploaded={(path, url) => {
+          setSignaturePath(path);
+          setSignatureUrl(url);
+          success('স্বাক্ষর সফলভাবে আপলোড হয়েছে!');
+        }}
+      />
+
+      <div className="sticky bottom-16 md:bottom-4 z-20 bg-white/95 backdrop-blur-xs p-4 rounded-xl border border-gray-200 shadow-lg flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs text-gray-600">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>পরিবর্তন সংরক্ষণ করতে অবশ্যই "সিভি সেভ করুন" বাটনে ক্লিক করুন।</span>
+        </div>
+        <Button onClick={handleSave} loading={saving} icon={<Save className="w-4 h-4" />}>
+          সিভি সেভ করুন
+        </Button>
+      </div>
+
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="সিভি মুছে ফেলা নিশ্চিত করুন"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setDeleteModalOpen(false)} disabled={deleting}>
+              বাতিল
+            </Button>
+            <Button variant="danger" size="sm" loading={deleting} onClick={handleDeleteProfile}>
+              হ্যাঁ, সিভি মুছে ফেলুন
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-xs text-gray-700">
+          <div className="flex items-start gap-2 text-rose-600 font-semibold">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>সতর্কতা: এই কাজটি পূর্বাবস্থায় ফিরিয়ে আনা যাবে না!</span>
+          </div>
+          <p>
+            আপনি নিশ্চিত যে আপনার সংরক্ষিত সকল সিভি তথ্য ও আপলোড করা ছবি/স্বাক্ষর মুছে ফেলতে চান? পরবর্তী সময়ে চাকরির আবেদনের জন্য আপনাকে নতুন করে সব তথ্য পূরণ করতে হবে।
+          </p>
+        </div>
+      </Modal>
+    </div>
+  );
+};

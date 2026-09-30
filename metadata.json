@@ -1,0 +1,6 @@
+{
+  "name": "চাকরি আবেদন সার্ভিস প্ল্যাটফর্ম",
+  "description": "বাংলাদেশের সরকারি ও অন্যান্য চাকরির অনলাইন আবেদন ও সিভি সার্ভিস প্ল্যাটফর্ম।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
