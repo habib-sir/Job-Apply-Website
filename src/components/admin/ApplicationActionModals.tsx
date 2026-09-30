@@ -24,6 +24,7 @@ import {
   FileText,
   Image as ImageIcon,
 } from 'lucide-react';
+import { DrivePickerButton } from '../drive/DrivePickerButton';
 
 interface RejectModalProps {
   isOpen: boolean;
@@ -198,19 +199,30 @@ export const UploadSoftCopyModal: React.FC<UploadSoftCopyModalProps> = ({
           </div>
 
           <div className="pt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
               <label className="text-xs font-bold text-gray-700">
-                অথবা Google Drive লিংক দিন:
+                অথবা Google Drive স্টোরেজ থেকে লিংক দিন:
               </label>
-              {!useDriveInput && (
-                <button
-                  type="button"
-                  onClick={() => setUseDriveInput(true)}
-                  className="text-[11px] text-emerald-700 font-semibold hover:underline"
-                >
-                  ড্রাইভ লিংক ইনপুট দেখান
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <DrivePickerButton
+                  acceptMime="pdf"
+                  label="Google Drive থেকে বাছুন / আপলোড করুন"
+                  onSelectDriveUrl={(url) => {
+                    setDriveUrl(url);
+                    setUseDriveInput(true);
+                    setErrorMsg('');
+                  }}
+                />
+                {!useDriveInput && !driveUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setUseDriveInput(true)}
+                    className="text-[11px] text-emerald-700 font-semibold hover:underline"
+                  >
+                    লিংক লিখুন
+                  </button>
+                )}
+              </div>
             </div>
 
             {(useDriveInput || driveUrl) && (
@@ -219,7 +231,7 @@ export const UploadSoftCopyModal: React.FC<UploadSoftCopyModalProps> = ({
                 placeholder="https://drive.google.com/file/d/.../view"
                 value={driveUrl}
                 onChange={(e) => setDriveUrl(e.target.value)}
-                helperText="শুধুমাত্র drive.google.com বা docs.google.com শেয়ারেবল লিংক দিন"
+                helperText="Google Drive শেয়ারেবল লিংক"
               />
             )}
           </div>
@@ -376,19 +388,30 @@ export const CompletePaidModal: React.FC<CompletePaidModalProps> = ({
           </div>
 
           <div className="pt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
               <label className="text-xs font-bold text-gray-700">
-                অথবা Google Drive লিংক দিন:
+                অথবা Google Drive স্টোরেজ থেকে লিংক দিন:
               </label>
-              {!useDriveInput && (
-                <button
-                  type="button"
-                  onClick={() => setUseDriveInput(true)}
-                  className="text-[11px] text-emerald-700 font-semibold hover:underline"
-                >
-                  ড্রাইভ লিংক ইনপুট দেখান
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <DrivePickerButton
+                  acceptMime="pdf"
+                  label="Google Drive থেকে বাছুন / আপলোড করুন"
+                  onSelectDriveUrl={(url) => {
+                    setDriveUrl(url);
+                    setUseDriveInput(true);
+                    setErrorMsg('');
+                  }}
+                />
+                {!useDriveInput && !driveUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setUseDriveInput(true)}
+                    className="text-[11px] text-emerald-700 font-semibold hover:underline"
+                  >
+                    লিংক লিখুন
+                  </button>
+                )}
+              </div>
             </div>
 
             {(useDriveInput || driveUrl) && (
@@ -397,7 +420,7 @@ export const CompletePaidModal: React.FC<CompletePaidModalProps> = ({
                 placeholder="https://drive.google.com/file/d/.../view"
                 value={driveUrl}
                 onChange={(e) => setDriveUrl(e.target.value)}
-                helperText="শুধুমাত্র drive.google.com বা docs.google.com শেয়ারেবল লিংক দিন"
+                helperText="Google Drive শেয়ারেবল লিংক"
               />
             )}
           </div>

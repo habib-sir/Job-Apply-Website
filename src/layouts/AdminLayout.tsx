@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Award,
   Download,
+  HardDrive,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -51,6 +52,7 @@ export const AdminLayout: React.FC = () => {
       title: 'কনফিগারেশন ও টুলস',
       items: [
         { to: '/admin/settings/payment', label: 'পেমেন্ট সেটিংস', icon: Settings },
+        { to: '/admin/storage', label: 'Google Drive স্টোরেজ', icon: HardDrive },
         { to: '/admin/export', label: 'ফাইল এক্সপোর্ট', icon: Download },
       ],
     },

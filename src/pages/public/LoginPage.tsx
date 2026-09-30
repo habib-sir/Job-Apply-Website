@@ -4,19 +4,35 @@ import { Briefcase, Lock, Phone, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
+import { GoogleSignInButton } from '../../components/common/GoogleSignInButton';
 import { useToast } from '../../components/common/Toast';
 
 export const LoginPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState('');
-  const { loginUser } = useAuth();
+  const { loginUser, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { success } = useToast();
 
   const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+  const handleGoogleLogin = async () => {
+    setLocalError('');
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      success('Google অ্যাকাউন্ট দিয়ে সফলভাবে লগইন হয়েছে!');
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      setLocalError(err.message || 'Google দিয়ে লগইন ব্যর্থ হয়েছে');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +101,21 @@ export const LoginPage: React.FC = () => {
             লগইন করুন
           </Button>
         </form>
+
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <div className="flex-1 border-t border-gray-200" />
+          <span className="text-[11px] text-gray-400 font-medium">অথবা</span>
+          <div className="flex-1 border-t border-gray-200" />
+        </div>
+
+        <div className="mt-4">
+          <GoogleSignInButton
+            onClick={handleGoogleLogin}
+            loading={googleLoading}
+            text="Google দিয়ে প্রবেশ করুন"
+            className="w-full"
+          />
+        </div>
 
         <div className="mt-6 pt-5 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-600">

@@ -10,7 +10,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || defaultAppletConfig.projectId,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultAppletConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || defaultAppletConfig.appId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || defaultAppletConfig.firestoreDatabaseId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || (defaultAppletConfig as any).firestoreDatabaseId,
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

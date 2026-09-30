@@ -17,6 +17,7 @@ import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { RichTextEditor } from '../../components/common/RichTextEditor';
 import { JobPostsTableSection } from '../../components/admin/JobPostsTableSection';
+import { DrivePickerButton } from '../../components/drive/DrivePickerButton';
 import { generateSlug } from '../../utils/slugify';
 import { useToast } from '../../components/common/Toast';
 import { ArrowLeft, Save, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
@@ -337,12 +338,22 @@ export const AdminJobFormPage: React.FC = () => {
 
           {/* Official circular link field */}
           <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-xs font-bold text-gray-700">
+                সার্কুলার ফাইল লিংক (Google Drive বা অফিসিয়াল সাইট লিংক)
+              </label>
+              <DrivePickerButton
+                acceptMime="pdf"
+                label="Google Drive থেকে বাছুন / আপলোড করুন"
+                onSelectDriveUrl={(url) => setCircularLink(url)}
+              />
+            </div>
             <Input
-              label="সার্কুলার ফাইল লিংক (Google Drive বা অফিসিয়াল সাইট লিংক)"
+              label=""
               placeholder="https://drive.google.com/... অথবা অফিসিয়াল লিংক"
               value={circularLink}
               onChange={(e) => setCircularLink(e.target.value)}
-              helperText="সার্কুলার PDF ফাইলের বদলে গুগল ড্রাইভ বা ওয়েবসাইট লিংক প্রদান করুন"
+              helperText="সার্কুলার PDF সরাসরি গুগল ড্রাইভে আপলোড করে অথবা ড্রাইভ থেকে বেছে লিংক দিতে পারেন"
             />
           </div>
         </div>

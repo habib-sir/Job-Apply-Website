@@ -36,6 +36,7 @@ import { AdminExamsPage } from './pages/admin/AdminExamsPage';
 import { AdminApplicationsPage } from './pages/admin/AdminApplicationsPage';
 import { AdminPaymentSettingsPage } from './pages/admin/AdminPaymentSettingsPage';
 import { AdminExportPage } from './pages/admin/AdminExportPage';
+import { AdminGoogleDrivePage } from './pages/admin/AdminGoogleDrivePage';
 
 export default function App() {
   return (
@@ -88,6 +89,7 @@ export default function App() {
                 <Route path="exams" element={<AdminExamsPage />} />
                 <Route path="applications/:step" element={<AdminApplicationsPage />} />
                 <Route path="settings/payment" element={<AdminPaymentSettingsPage />} />
+                <Route path="storage" element={<AdminGoogleDrivePage />} />
                 <Route path="export" element={<AdminExportPage />} />
               </Route>
 

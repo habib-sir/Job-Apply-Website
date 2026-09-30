@@ -4,10 +4,13 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../services/firebase';
+import { googleProvider, setDriveAccessToken } from '../services/googleDrive';
 import { mobileToEmail, emailToMobile, isValidMobile, isValidPassword } from '../utils/auth';
 import { UserRole } from '../types';
 
@@ -19,6 +22,7 @@ interface AuthContextType {
   loginUser: (mobile: string, pass: string) => Promise<void>;
   registerUser: (mobile: string, pass: string) => Promise<void>;
   loginAdmin: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   error: string | null;
   clearError: () => void;
@@ -149,6 +153,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async () => {
+    clearError();
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setDriveAccessToken(credential.accessToken, {
+          email: result.user.email,
+          name: result.user.displayName,
+          photoURL: result.user.photoURL,
+        });
+      }
+
+      // Check / ensure user profile exists in Firestore
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists()) {
+        const adminDoc = await getDoc(doc(db, 'admins', result.user.uid));
+        if (!adminDoc.exists()) {
+          try {
+            await setDoc(userDocRef, {
+              email: result.user.email || '',
+              displayName: result.user.displayName || '',
+              role: 'user',
+              createdAt: serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('User document init warning:', e);
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        throw new Error('Google লগইন উইন্ডো বন্ধ করা হয়েছে');
+      }
+      throw new Error(err.message || 'Google দিয়ে লগইন ব্যর্থ হয়েছে');
+    }
+  };
+
   const logout = async () => {
     clearError();
     await signOut(auth);
@@ -167,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginUser,
         registerUser,
         loginAdmin,
+        loginWithGoogle,
         logout,
         error,
         clearError,
