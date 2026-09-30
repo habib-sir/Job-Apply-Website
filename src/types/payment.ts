@@ -1,4 +1,4 @@
-export type PaymentMethod = 'bkash' | 'rocket';
+export type PaymentMethod = 'bkash' | 'rocket' | 'nagad';
 
 export interface PaymentDetails {
   method: PaymentMethod;

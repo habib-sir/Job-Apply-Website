@@ -9,11 +9,12 @@ import { useToast } from '../../components/common/Toast';
 import { Settings, Save, ShieldCheck, MessageCircle } from 'lucide-react';
 
 export const AdminPaymentSettingsPage: React.FC = () => {
-  const [bkashNumber, setBkashNumber] = useState('');
-  const [rocketNumber, setRocketNumber] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [bkashNumber, setBkashNumber] = useState('01704368053');
+  const [rocketNumber, setRocketNumber] = useState('01771522503');
+  const [nagadNumber, setNagadNumber] = useState('01771522503');
+  const [whatsappNumber, setWhatsappNumber] = useState('01704368053');
   const [instructions, setInstructions] = useState(
-    'bKash বা Rocket অ্যাপ থেকে Send Money করুন এবং Reference-এ আপনার আবেদন আইডি দিন।'
+    'bKash, Rocket বা Nagad অ্যাপ থেকে Send Money করুন এবং Reference-এ আপনার আবেদন আইডি দিন।'
   );
 
   const [loading, setLoading] = useState(true);
@@ -26,10 +27,11 @@ export const AdminPaymentSettingsPage: React.FC = () => {
         const snap = await getDoc(doc(db, 'settings', 'payment'));
         if (snap.exists()) {
           const data = snap.data() as PaymentSettings;
-          setBkashNumber(data.bkashNumber || '');
-          setRocketNumber(data.rocketNumber || '');
-          setWhatsappNumber(data.whatsappNumber || '');
-          setInstructions(data.instructions || '');
+          setBkashNumber(data.bkashNumber || '01704368053');
+          setRocketNumber(data.rocketNumber || '01771522503');
+          setNagadNumber(data.nagadNumber || '01771522503');
+          setWhatsappNumber(data.whatsappNumber || '01704368053');
+          setInstructions(data.instructions || 'bKash, Rocket বা Nagad অ্যাপ থেকে Send Money করুন এবং Reference-এ আপনার আবেদন আইডি দিন।');
         }
       } catch (err) {
         // Silently handled
@@ -47,6 +49,7 @@ export const AdminPaymentSettingsPage: React.FC = () => {
       await setDoc(doc(db, 'settings', 'payment'), {
         bkashNumber: bkashNumber.trim(),
         rocketNumber: rocketNumber.trim(),
+        nagadNumber: nagadNumber.trim(),
         whatsappNumber: whatsappNumber.trim(),
         instructions: instructions.trim(),
         updatedAt: serverTimestamp(),
@@ -91,6 +94,14 @@ export const AdminPaymentSettingsPage: React.FC = () => {
           placeholder="019XXXXXXXXX (Personal)"
           value={rocketNumber}
           onChange={(e) => setRocketNumber(e.target.value)}
+          requiredStar
+        />
+
+        <Input
+          label="Nagad পার্সোনাল নম্বর"
+          placeholder="017XXXXXXXX (Personal)"
+          value={nagadNumber}
+          onChange={(e) => setNagadNumber(e.target.value)}
           requiredStar
         />
 

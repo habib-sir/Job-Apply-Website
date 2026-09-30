@@ -9,7 +9,7 @@ import {
   compressImageToDataUrl,
   FILE_LIMITS,
 } from '../../services/files';
-import { PaymentSettings } from '../../types';
+import { PaymentSettings, PaymentMethod } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { PaymentHeaderReference } from '../../components/payment/PaymentHeaderReference';
@@ -25,13 +25,14 @@ export const ApplicationPaymentPage: React.FC = () => {
   const state = location.state as any;
 
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
-    bkashNumber: '',
-    rocketNumber: '',
-    instructions: 'bKash বা Rocket অ্যাপ থেকে Send Money করুন এবং Reference-এ আপনার আবেদন আইডি দিন।',
-    whatsappNumber: '',
+    bkashNumber: '01704368053',
+    rocketNumber: '01771522503',
+    nagadNumber: '01771522503',
+    instructions: 'bKash, Rocket বা Nagad অ্যাপ থেকে Send Money করুন এবং Reference-এ আপনার আবেদন আইডি দিন।',
+    whatsappNumber: '01704368053',
   });
 
-  const [method, setMethod] = useState<'bkash' | 'rocket'>('bkash');
+  const [method, setMethod] = useState<PaymentMethod>('bkash');
   const [trxId, setTrxId] = useState('');
   const [senderNumber, setSenderNumber] = useState('');
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
@@ -185,7 +186,12 @@ export const ApplicationPaymentPage: React.FC = () => {
     }
   };
 
-  const activeNumber = method === 'bkash' ? paymentSettings.bkashNumber : paymentSettings.rocketNumber;
+  const activeNumber =
+    method === 'bkash'
+      ? paymentSettings.bkashNumber || '01704368053'
+      : method === 'rocket'
+      ? paymentSettings.rocketNumber || '01771522503'
+      : paymentSettings.nagadNumber || '01771522503';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
@@ -203,38 +209,49 @@ export const ApplicationPaymentPage: React.FC = () => {
           <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
             টাকা পাঠানোর মাধ্যম নির্বাচন করুন:
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => setMethod('bkash')}
-              className={`p-3.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              className={`p-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                 method === 'bkash'
                   ? 'border-pink-600 bg-pink-50 text-pink-700 shadow-xs ring-2 ring-pink-500/20'
                   : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <span>bKash (সেন্ড মানি)</span>
+              <span>bKash</span>
             </button>
             <button
               type="button"
               onClick={() => setMethod('rocket')}
-              className={`p-3.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              className={`p-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                 method === 'rocket'
                   ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-xs ring-2 ring-purple-500/20'
                   : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <span>Rocket (সেন্ড মানি)</span>
+              <span>Rocket</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod('nagad')}
+              className={`p-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                method === 'nagad'
+                  ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-xs ring-2 ring-orange-500/20'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span>Nagad</span>
             </button>
           </div>
 
           <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
             <div>
               <span className="text-[11px] text-emerald-800 block">
-                {method === 'bkash' ? 'bKash নম্বর:' : 'Rocket নম্বর:'}
+                {method === 'bkash' ? 'bKash নম্বর:' : method === 'rocket' ? 'Rocket নম্বর:' : 'Nagad নম্বর:'}
               </span>
               <span className="font-mono text-base font-bold text-emerald-950">
-                {activeNumber || 'সেটিংসে নম্বর দেওয়া হয়নি'}
+                {activeNumber}
               </span>
             </div>
             {activeNumber && (

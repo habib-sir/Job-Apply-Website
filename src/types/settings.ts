@@ -1,6 +1,7 @@
 export interface PaymentSettings {
   bkashNumber: string;
   rocketNumber: string;
+  nagadNumber?: string;
   instructions: string;
   whatsappNumber: string;
 }
