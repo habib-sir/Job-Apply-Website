@@ -87,6 +87,8 @@ export interface CandidateProfile {
   presentDistrict?: string;
   permanentDistrict?: string;
   mobile?: string;
+  hasPhoto?: boolean;
+  hasSignature?: boolean;
   photoPath?: string;
   signaturePath?: string;
   photoUrl?: string;

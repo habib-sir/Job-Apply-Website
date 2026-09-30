@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../services/firebase';
+import { deleteFile, getFileId } from '../../services/files';
+import { syncJobToFeed } from '../../services/feed';
 import { JobCircular } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
@@ -40,6 +42,12 @@ export const AdminJobsListPage: React.FC = () => {
     setDeletingId(id);
     try {
       await deleteDoc(doc(db, 'jobs', id));
+      try {
+        await deleteFile(getFileId.cover(id));
+      } catch (e) {
+        // Non-fatal
+      }
+      await syncJobToFeed(id, {}, 'delete');
       setJobs((prev) => prev.filter((j) => j.id !== id));
       success('বিজ্ঞপ্তিটি সফলভাবে মুছে ফেলা হয়েছে');
     } catch (err) {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { getFile, getFileId } from '../../services/files';
 import { JobApplication } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
@@ -23,9 +24,33 @@ export const AdminExportPage: React.FC = () => {
       const apps = snap.docs.map((d) => ({ id: d.id, ...d.data() } as JobApplication));
 
       setStatusLog((prev) => [...prev, `মোট ${apps.length}টি আবেদন পাওয়া গেছে।`]);
+      setStatusLog((prev) => [...prev, 'প্রার্থীদের ছবি ও স্বাক্ষর সংগ্রহ করা হচ্ছে (getFile)...']);
+
+      // Enrich with photos & signatures using getFile
+      const enrichedApps = await Promise.all(
+        apps.map(async (app) => {
+          let photoData: string | undefined = undefined;
+          let signatureData: string | undefined = undefined;
+          try {
+            const [pDoc, sDoc] = await Promise.all([
+              getFile(getFileId.photo(app.uid)),
+              getFile(getFileId.signature(app.uid)),
+            ]);
+            photoData = pDoc?.data;
+            signatureData = sDoc?.data;
+          } catch (e) {
+            // Ignore individual file error
+          }
+          return {
+            ...app,
+            photoDataUrl: photoData,
+            signatureDataUrl: signatureData,
+          };
+        })
+      );
 
       // 1. Prepare JSON Content
-      const jsonContent = JSON.stringify(apps, null, 2);
+      const jsonContent = JSON.stringify(enrichedApps, null, 2);
 
       // 2. Prepare CSV Content
       const headers = [

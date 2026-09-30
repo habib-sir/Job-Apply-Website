@@ -71,7 +71,7 @@ export const UserDashboardPage: React.FC = () => {
     profile?.data?.dateOfBirth &&
     profile?.data?.nidNo &&
     profile?.data?.permanentDistrict &&
-    profile?.photoPath;
+    (profile?.hasPhoto || profile?.photoPath || profile?.photoUrl);
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getCountFromServer,
+  getDocs,
+  limit,
+} from 'firebase/firestore';
 import { db } from '../../services/firebase';
-import { JobApplication, JobCircular } from '../../types';
+import { JobApplication } from '../../types';
 import {
   Clock,
   Send,
@@ -33,63 +40,50 @@ export const AdminDashboardPage: React.FC = () => {
   useEffect(() => {
     const fetchAdminStats = async () => {
       try {
-        const appsSnap = await getDocs(collection(db, 'applications'));
-        const jobsSnap = await getDocs(collection(db, 'jobs'));
-
-        // Map jobs to deadline map
-        const jobDeadlines: Record<string, Date> = {};
-        jobsSnap.docs.forEach((docItem) => {
-          const j = docItem.data() as JobCircular;
-          if (j.deadline) {
-            jobDeadlines[docItem.id] = j.deadline.toDate ? j.deadline.toDate() : new Date(j.deadline);
-          }
-        });
-
-        let w = 0;
-        let an = 0;
-        let c = 0;
-        let pn = 0;
-        let comp = 0;
-        let rej = 0;
-
-        const now = new Date();
-        const twoDaysMs = 48 * 60 * 60 * 1000;
-        const urgentList: JobApplication[] = [];
-
-        appsSnap.docs.forEach((docItem) => {
-          const app = { id: docItem.id, ...docItem.data() } as JobApplication;
-          if (app.status === 'waiting') w++;
-          else if (app.status === 'apply_now') an++;
-          else if (app.status === 'checking' || app.status === 'correction') c++;
-          else if (app.status === 'payment_now') pn++;
-          else if (app.status === 'applied') comp++;
-          else if (app.status === 'rejected') rej++;
-
-          // Check if pending and has urgent deadline
-          if (app.status !== 'applied' && app.status !== 'rejected') {
-            const dl = jobDeadlines[app.jobId];
-            if (dl) {
-              const diff = dl.getTime() - now.getTime();
-              if (diff > 0 && diff <= twoDaysMs) {
-                urgentList.push({ ...app, deadline: dl });
-              }
-            }
-          }
-        });
+        // High-efficiency getCountFromServer to conserve Firestore read quota
+        const [
+          waitingCountSnap,
+          applyNowCountSnap,
+          checkingCountSnap,
+          correctionCountSnap,
+          paymentNowCountSnap,
+          completeCountSnap,
+          rejectedCountSnap,
+          jobsCountSnap,
+        ] = await Promise.all([
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'waiting'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'apply_now'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'checking'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'correction'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'payment_now'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'applied'))),
+          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'rejected'))),
+          getCountFromServer(collection(db, 'jobs')),
+        ]);
 
         setCounts({
-          waiting: w,
-          applyNow: an,
-          checking: c,
-          paymentNow: pn,
-          complete: comp,
-          rejected: rej,
-          jobsTotal: jobsSnap.size,
+          waiting: waitingCountSnap.data().count,
+          applyNow: applyNowCountSnap.data().count,
+          checking: checkingCountSnap.data().count + correctionCountSnap.data().count,
+          paymentNow: paymentNowCountSnap.data().count,
+          complete: completeCountSnap.data().count,
+          rejected: rejectedCountSnap.data().count,
+          jobsTotal: jobsCountSnap.data().count,
         });
 
-        setUrgentApps(urgentList.slice(0, 5));
+        // Small targeted query for urgent active items (limit 5)
+        const urgentSnap = await getDocs(
+          query(
+            collection(db, 'applications'),
+            where('status', 'in', ['waiting', 'apply_now', 'payment_now']),
+            limit(5)
+          )
+        );
+
+        const list = urgentSnap.docs.map((d) => ({ id: d.id, ...d.data() } as JobApplication));
+        setUrgentApps(list);
       } catch (e) {
-        // Silently handled
+        console.error('Error fetching admin counts:', e);
       } finally {
         setLoading(false);
       }
@@ -163,7 +157,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-gray-900">অ্যাডমিন ড্যাশবোর্ড ওভারভিউ</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            সকল আবেদন ও সিস্টেমের সার্বিক পরিসংখ্যান
+            সকল আবেদন ও সিস্টেমের সার্বিক পরিসংখ্যান (মোট সার্কুলার: {counts.jobsTotal}টি)
           </p>
         </div>
         <Link
@@ -174,12 +168,12 @@ export const AdminDashboardPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Urgent Alert Banner (Today/Tomorrow Deadline) */}
+      {/* Urgent Pending Alert Banner */}
       {urgentApps.length > 0 && (
         <div className="p-5 bg-rose-50 rounded-2xl border border-rose-200 space-y-3">
           <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
             <AlertCircle className="w-5 h-5 text-rose-600" />
-            <span>জরুরি সতর্কতা: আজ অথবা আগামীকাল শেষ হওয়া পেন্ডিং আবেদন ({urgentApps.length}টি)</span>
+            <span>জরুরি সতর্কতা: পেন্ডিং সক্রিয় আবেদন ({urgentApps.length}টি)</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {urgentApps.map((u) => (
@@ -187,8 +181,8 @@ export const AdminDashboardPage: React.FC = () => {
                 <span className="font-mono font-bold text-rose-700">{u.id}</span>
                 <span className="block font-semibold text-gray-900 line-clamp-1 mt-0.5">{u.jobTitle}</span>
                 <span className="text-[11px] text-gray-500 block">পদ: {u.postName}</span>
-                <span className="text-[10px] font-bold text-rose-600 mt-1 block">
-                  ডেডলাইন: {new Date(u.deadline).toLocaleDateString('bn-BD')}
+                <span className="text-[10px] font-bold text-amber-600 mt-1 block">
+                  স্ট্যাটাস: {u.status}
                 </span>
               </div>
             ))}
@@ -234,7 +228,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div className="p-3 bg-sky-50 rounded-lg text-xs border border-sky-100">
             <span className="font-bold text-sky-800 block mb-1">২. Apply Now</span>
-            <p className="text-sky-700 text-[11px]">Teletalk-এ আবেদন করে সফট কপি PDF আপলোড করুন।</p>
+            <p className="text-sky-700 text-[11px]">Teletalk-এ আবেদন করে সফট কপি PDF বা ড্রাইভ লিংক দিন।</p>
           </div>
           <div className="p-3 bg-indigo-50 rounded-lg text-xs border border-indigo-100">
             <span className="font-bold text-indigo-800 block mb-1">৩. Check</span>
@@ -242,7 +236,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div className="p-3 bg-rose-50 rounded-lg text-xs border border-rose-100">
             <span className="font-bold text-rose-800 block mb-1">৪. Payment Now</span>
-            <p className="text-rose-700 text-[11px]">Teletalk ফি পরিশোধ করে পেইড কপি PDF আপলোড করুন।</p>
+            <p className="text-rose-700 text-[11px]">Teletalk ফি পরিশোধ করে পেইড কপি PDF বা ড্রাইভ লিংক দিন।</p>
           </div>
           <div className="p-3 bg-emerald-50 rounded-lg text-xs border border-emerald-100">
             <span className="font-bold text-emerald-800 block mb-1">৫. Complete</span>

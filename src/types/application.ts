@@ -33,6 +33,10 @@ export interface JobApplication {
   deadline?: any;
   fee: ApplicationFee;
   payment: PaymentDetails;
+  hasSoftCopy?: boolean;
+  softCopyDriveUrl?: string;
+  hasPaidCopy?: boolean;
+  paidCopyDriveUrl?: string;
   softCopyPath?: string;
   paidCopyPath?: string;
   softCopyUrl?: string;

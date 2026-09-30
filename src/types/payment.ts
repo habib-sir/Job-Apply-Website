@@ -4,6 +4,7 @@ export interface PaymentDetails {
   method: PaymentMethod;
   trxId: string;
   senderNumber: string;
+  hasScreenshot?: boolean;
   screenshotPath?: string;
   screenshotUrl?: string;
   verified: boolean;

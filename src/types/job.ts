@@ -19,8 +19,10 @@ export interface JobCircular {
   slug: string;
   category: JobCategory;
   content: string;
-  featuredImage?: string;
-  circularFile?: string;
+  hasCover?: boolean;
+  circularLink?: string | null;
+  featuredImage?: string | null;
+  circularFile?: string | null;
   deadline: any;
   applyLink: string;
   applyServiceEnabled: boolean;

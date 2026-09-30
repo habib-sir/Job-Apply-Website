@@ -1,16 +1,19 @@
 import React, { useRef, useState } from 'react';
-import { Camera, FileSignature, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
-import { resizeAndCompressImage } from '../../utils/imageCompressor';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../services/firebase';
+import { Camera, FileSignature, UploadCloud } from 'lucide-react';
 import { Spinner } from '../common/Spinner';
+import {
+  saveFile,
+  getFileId,
+  compressImageToDataUrl,
+  FILE_LIMITS,
+} from '../../services/files';
 
 interface Props {
   uid: string;
   photoUrl?: string;
   signatureUrl?: string;
-  onPhotoUploaded: (path: string, url: string) => void;
-  onSignatureUploaded: (path: string, url: string) => void;
+  onPhotoUploaded: (dataUrl: string) => void;
+  onSignatureUploaded: (dataUrl: string) => void;
 }
 
 export const MediaUploadSection: React.FC<Props> = ({
@@ -37,13 +40,28 @@ export const MediaUploadSection: React.FC<Props> = ({
 
     try {
       // Auto resize & compress to 300x300, <=100KB JPEG
-      const compressed = await resizeAndCompressImage(file, 300, 300, 100);
-      const photoStorageRef = ref(storage, `users/${uid}/photo.jpg`);
-      await uploadBytes(photoStorageRef, compressed.blob, {
-        contentType: 'image/jpeg',
+      const compressed = await compressImageToDataUrl(
+        file,
+        300,
+        300,
+        FILE_LIMITS.PHOTO,
+        'image/jpeg'
+      );
+
+      if (compressed.sizeBytes > FILE_LIMITS.PHOTO) {
+        throw new Error('ছবির সাইজ সর্বোচ্চ ১০০ KB হতে পারবে');
+      }
+
+      await saveFile({
+        id: getFileId.photo(uid),
+        ownerUid: uid,
+        kind: 'photo',
+        mime: 'image/jpeg',
+        sizeBytes: compressed.sizeBytes,
+        data: compressed.dataUrl,
       });
-      const url = await getDownloadURL(photoStorageRef);
-      onPhotoUploaded(`users/${uid}/photo.jpg`, url);
+
+      onPhotoUploaded(compressed.dataUrl);
     } catch (err: any) {
       setPhotoError(err.message || 'ছবি আপলোড ব্যর্থ হয়েছে');
     } finally {
@@ -61,13 +79,28 @@ export const MediaUploadSection: React.FC<Props> = ({
 
     try {
       // Auto resize & compress to 300x80, <=60KB JPEG
-      const compressed = await resizeAndCompressImage(file, 300, 80, 60);
-      const sigStorageRef = ref(storage, `users/${uid}/signature.jpg`);
-      await uploadBytes(sigStorageRef, compressed.blob, {
-        contentType: 'image/jpeg',
+      const compressed = await compressImageToDataUrl(
+        file,
+        300,
+        80,
+        FILE_LIMITS.SIGNATURE,
+        'image/jpeg'
+      );
+
+      if (compressed.sizeBytes > FILE_LIMITS.SIGNATURE) {
+        throw new Error('স্বাক্ষরের সাইজ সর্বোচ্চ ৬০ KB হতে পারবে');
+      }
+
+      await saveFile({
+        id: getFileId.signature(uid),
+        ownerUid: uid,
+        kind: 'signature',
+        mime: 'image/jpeg',
+        sizeBytes: compressed.sizeBytes,
+        data: compressed.dataUrl,
       });
-      const url = await getDownloadURL(sigStorageRef);
-      onSignatureUploaded(`users/${uid}/signature.jpg`, url);
+
+      onSignatureUploaded(compressed.dataUrl);
     } catch (err: any) {
       setSigError(err.message || 'স্বাক্ষর আপলোড ব্যর্থ হয়েছে');
     } finally {

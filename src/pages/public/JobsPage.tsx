@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Calendar, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  collection,
+  query,
+  where,
+  limit,
+  startAfter,
+  getDocs,
+  DocumentSnapshot,
+} from 'firebase/firestore';
 import { db } from '../../services/firebase';
-import { JobCircular, JobCategory } from '../../types';
+import { getCached, setCached } from '../../services/cache';
+import { JobCircular } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
 import { EmptyState } from '../../components/common/EmptyState';
 
@@ -16,38 +25,68 @@ export const JobsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Store page cursor snapshots for limit(20) + startAfter pagination
+  const pageCursorMap = useRef<Map<number, DocumentSnapshot>>(new Map());
+
+  const fetchPage = async (page: number) => {
+    setLoading(true);
+    const cacheKey = `jobs_page_${page}`;
+    const cached = getCached<JobCircular[]>(cacheKey);
+
+    if (cached) {
+      setJobs(cached);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      let q;
+      if (page === 1) {
+        q = query(
+          collection(db, 'jobs'),
+          where('status', '==', 'published'),
+          limit(ITEMS_PER_PAGE)
+        );
+      } else {
+        const prevCursor = pageCursorMap.current.get(page - 1);
+        if (prevCursor) {
+          q = query(
+            collection(db, 'jobs'),
+            where('status', '==', 'published'),
+            startAfter(prevCursor),
+            limit(ITEMS_PER_PAGE)
+          );
+        } else {
+          q = query(
+            collection(db, 'jobs'),
+            where('status', '==', 'published'),
+            limit(ITEMS_PER_PAGE)
+          );
+        }
+      }
+
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as JobCircular));
+
+      if (snap.docs.length > 0) {
+        pageCursorMap.current.set(page, snap.docs[snap.docs.length - 1]);
+      }
+
+      setHasMore(snap.docs.length === ITEMS_PER_PAGE);
+      setCached(cacheKey, list);
+      setJobs(list);
+    } catch (e) {
+      console.error('Failed to load jobs page:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'jobs'));
-        const now = new Date();
-
-        const published = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() } as JobCircular))
-          .filter((j) => {
-            if (j.status === 'published') return true;
-            if (j.status === 'scheduled' && j.publishedAt) {
-              const pubTime = j.publishedAt.toDate ? j.publishedAt.toDate() : new Date(j.publishedAt);
-              return pubTime <= now;
-            }
-            return false;
-          })
-          .sort((a, b) => {
-            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
-            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
-            return timeB - timeA;
-          });
-
-        setJobs(published);
-      } catch (e) {
-        // Silently handled
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJobs();
-  }, []);
+    fetchPage(currentPage);
+  }, [currentPage]);
 
   const now = new Date();
 
@@ -58,12 +97,6 @@ export const JobsPage: React.FC = () => {
     const matchesCategory = categoryFilter === 'all' || job.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
-
-  const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE) || 1;
-  const paginatedJobs = filteredJobs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
@@ -80,7 +113,7 @@ export const JobsPage: React.FC = () => {
           সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          মোট {filteredJobs.length}টি বিজ্ঞপ্তি পাওয়া গেছে (প্রতি পেজে ২০টি করে)
+          পৃষ্ঠা {currentPage} • প্রতি পেজে ২০টি করে বিজ্ঞপ্তি (কোটা সাশ্রয়ী পেজিনেশন)
         </p>
       </div>
 
@@ -92,20 +125,14 @@ export const JobsPage: React.FC = () => {
             type="text"
             placeholder="চাকরি বা পদের নাম দিয়ে খুঁজুন..."
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-600"
           />
         </div>
 
         <select
           value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setCurrentPage(1);
-          }}
+          onChange={(e) => setCategoryFilter(e.target.value)}
           className="px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-emerald-600 sm:w-48"
         >
           <option value="all">সকল ক্যাটাগরি</option>
@@ -123,14 +150,14 @@ export const JobsPage: React.FC = () => {
         <div className="py-20 flex justify-center">
           <Spinner size="lg" text="চাকরির বিজ্ঞপ্তি লোড হচ্ছে..." />
         </div>
-      ) : paginatedJobs.length === 0 ? (
+      ) : filteredJobs.length === 0 ? (
         <EmptyState
           title="কোনো বিজ্ঞপ্তি পাওয়া যায়নি"
-          description="আপনার সার্চের সাথে মিলে এমন কোনো চাকরি বর্তমানে নেই।"
+          description="আপনার সার্চের সাথে মিলে এমন কোনো চাকরি এই পৃষ্ঠায় বর্তমানে নেই।"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {paginatedJobs.map((job) => {
+          {filteredJobs.map((job) => {
             const isExpired = job.deadline
               ? new Date(job.deadline.toDate ? job.deadline.toDate() : job.deadline).getTime() < now.getTime()
               : false;
@@ -188,27 +215,29 @@ export const JobsPage: React.FC = () => {
       )}
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-6">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-semibold text-gray-700 px-3">
-            পৃষ্ঠা {currentPage} এর {totalPages}
-          </span>
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      <div className="flex items-center justify-center gap-3 pt-6 border-t border-gray-200">
+        <button
+          disabled={currentPage === 1 || loading}
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>পূর্ববর্তী পৃষ্ঠা</span>
+        </button>
+
+        <span className="text-xs font-semibold text-gray-700 px-3 py-1 bg-gray-100 rounded-md">
+          পৃষ্ঠা {currentPage}
+        </span>
+
+        <button
+          disabled={!hasMore || loading}
+          onClick={() => setCurrentPage((p) => p + 1)}
+          className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <span>পরবর্তী পৃষ্ঠা</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 };

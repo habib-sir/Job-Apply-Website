@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase';
-import { JobCircular, ExamNotice } from '../../types';
+import { getFeedLatest, FeedJobSummary } from '../../services/feed';
+import { getCached, setCached } from '../../services/cache';
+import { ExamNotice } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
 import { HomeUrgentDeadlines } from '../../components/home/HomeUrgentDeadlines';
 import { ArrowRight, Calendar, Sparkles, Award } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const [jobs, setJobs] = useState<JobCircular[]>([]);
+  const [jobs, setJobs] = useState<FeedJobSummary[]>([]);
   const [examNotices, setExamNotices] = useState<ExamNotice[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -17,30 +19,20 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const jobsSnap = await getDocs(collection(db, 'jobs'));
-        const now = new Date();
+        // High-efficiency single read from feed/latest (or 0 reads if in 5-min cache)
+        const feedPosts = await getFeedLatest();
+        setJobs(feedPosts);
 
-        const publishedJobs = jobsSnap.docs
-          .map((d) => ({ id: d.id, ...d.data() } as JobCircular))
-          .filter((j) => {
-            if (j.status === 'published') return true;
-            if (j.status === 'scheduled' && j.publishedAt) {
-              const pubTime = j.publishedAt.toDate ? j.publishedAt.toDate() : new Date(j.publishedAt);
-              return pubTime <= now;
-            }
-            return false;
-          })
-          .sort((a, b) => {
-            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
-            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
-            return timeB - timeA;
-          });
-
-        setJobs(publishedJobs);
-
-        const examSnap = await getDocs(collection(db, 'exams'));
-        const exams = examSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ExamNotice));
-        setExamNotices(exams.slice(0, 4));
+        // Exams with 5-minute cache
+        const cachedExams = getCached<ExamNotice[]>('exams_home');
+        if (cachedExams) {
+          setExamNotices(cachedExams);
+        } else {
+          const examSnap = await getDocs(query(collection(db, 'exams'), limit(4)));
+          const exams = examSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ExamNotice));
+          setCached('exams_home', exams);
+          setExamNotices(exams);
+        }
       } catch (err) {
         // Silently handled
       } finally {
@@ -121,8 +113,8 @@ export const HomePage: React.FC = () => {
 
       {/* Urgent Deadlines Alert Banners */}
       <HomeUrgentDeadlines
-        tomorrowDeadlineJobs={tomorrowDeadlineJobs}
-        thisWeekDeadlineJobs={thisWeekDeadlineJobs}
+        tomorrowDeadlineJobs={tomorrowDeadlineJobs as any}
+        thisWeekDeadlineJobs={thisWeekDeadlineJobs as any}
       />
 
       {/* Latest Posts with Category Tabs */}
@@ -130,7 +122,7 @@ export const HomePage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">সাম্প্রতিক নিয়োগ বিজ্ঞপ্তি</h2>
-            <p className="text-xs text-gray-500">অনলাইন আবেদন সুবিধাসহ সর্বশেষ প্রকাশিত পোস্ট</p>
+            <p className="text-xs text-gray-500">অনলাইন আবেদন সুবিধাসহ সর্বশেষ প্রকাশিত পোস্ট (সর্বোচ্চ ৩০টি ফিড)</p>
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">

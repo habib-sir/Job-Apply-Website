@@ -2,8 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc, runTransaction, serverTimestamp, collection, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../services/firebase';
+import { db } from '../../services/firebase';
+import {
+  saveFile,
+  getFileId,
+  compressImageToDataUrl,
+  FILE_LIMITS,
+} from '../../services/files';
 import { PaymentSettings } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
@@ -87,16 +92,30 @@ export const ApplicationPaymentPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      let screenshotUrl = '';
-      let screenshotPath = '';
+      let hasScreenshot = false;
 
       if (screenshotFile) {
         setScreenshotUploading(true);
-        const ext = screenshotFile.name.split('.').pop() || 'jpg';
-        screenshotPath = `payments/${state.appId}_${Date.now()}.${ext}`;
-        const sRef = ref(storage, screenshotPath);
-        await uploadBytes(sRef, screenshotFile);
-        screenshotUrl = await getDownloadURL(sRef);
+        // Auto compress screenshot to <=150KB JPEG
+        const compressed = await compressImageToDataUrl(
+          screenshotFile,
+          1000,
+          1000,
+          FILE_LIMITS.SCREENSHOT,
+          'image/jpeg'
+        );
+
+        await saveFile({
+          id: getFileId.screenshot(state.appId),
+          ownerUid: user.uid,
+          kind: 'screenshot',
+          appId: state.appId,
+          mime: 'image/jpeg',
+          sizeBytes: compressed.sizeBytes,
+          data: compressed.dataUrl,
+        });
+
+        hasScreenshot = true;
         setScreenshotUploading(false);
       }
 
@@ -134,8 +153,7 @@ export const ApplicationPaymentPage: React.FC = () => {
             method,
             trxId: cleanTrx,
             senderNumber: cleanSender,
-            screenshotPath: screenshotPath || null,
-            screenshotUrl: screenshotUrl || null,
+            hasScreenshot,
             verified: false,
           },
           createdAt: serverTimestamp(),

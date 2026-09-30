@@ -158,6 +158,31 @@
         "createdAt": { "type": "string" }
       },
       "required": ["title", "createdAt"]
+    },
+    "File": {
+      "title": "File",
+      "description": "Base64 encoded file storage in Firestore",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string" },
+        "kind": { "type": "string", "enum": ["photo", "signature", "screenshot", "softcopy", "paidcopy", "cover"] },
+        "appId": { "type": "string" },
+        "mime": { "type": "string" },
+        "sizeBytes": { "type": "number" },
+        "data": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["ownerUid", "kind", "mime", "sizeBytes", "data"]
+    },
+    "Feed": {
+      "title": "Feed",
+      "description": "Aggregated latest job postings for single-read homepage feed",
+      "type": "object",
+      "properties": {
+        "posts": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["posts"]
     }
   },
   "firestore": {
@@ -196,6 +221,14 @@
     "/exams/{id}": {
       "schema": "Exam",
       "description": "Exam and result notices"
+    },
+    "/files/{fileId}": {
+      "schema": "File",
+      "description": "Base64 user media, screenshots, and circular cover files"
+    },
+    "/feed/{id}": {
+      "schema": "Feed",
+      "description": "Feed documents for zero-cost single read home/list pages"
     }
   }
 }

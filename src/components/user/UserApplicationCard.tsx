@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { JobApplication } from '../../types';
 import { Button } from '../common/Button';
-import { Calendar, FileDown, CheckCircle, Edit3 } from 'lucide-react';
+import { downloadOrOpenFile, getFileId } from '../../services/files';
+import { Calendar, FileDown, CheckCircle, Edit3, ExternalLink } from 'lucide-react';
 
 interface Props {
   app: JobApplication;
@@ -16,9 +17,25 @@ export const UserApplicationCard: React.FC<Props> = ({
   onApproveSoftCopy,
   onOpenCorrectionModal,
 }) => {
+  const [openingFile, setOpeningFile] = useState(false);
+
   const dateStr = app.createdAt?.toDate
     ? app.createdAt.toDate().toLocaleDateString('bn-BD')
     : 'সদ্য জমা';
+
+  const hasSoft = Boolean(app.hasSoftCopy || app.softCopyUrl || app.softCopyPath);
+  const hasPaid = Boolean(app.hasPaidCopy || app.paidCopyUrl || app.paidCopyPath);
+
+  const handleOpenFile = async (fileId: string, filename: string, mode: 'open' | 'download' = 'open') => {
+    setOpeningFile(true);
+    try {
+      await downloadOrOpenFile(fileId, filename, mode);
+    } catch (e: any) {
+      alert(e.message || 'ফাইল খুলতে সমস্যা হয়েছে');
+    } finally {
+      setOpeningFile(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-6 shadow-xs space-y-4">
@@ -44,6 +61,8 @@ export const UserApplicationCard: React.FC<Props> = ({
               ? 'bg-amber-100 text-amber-800'
               : app.status === 'checking'
               ? 'bg-sky-100 text-sky-800'
+              : app.status === 'apply_now'
+              ? 'bg-blue-100 text-blue-800'
               : 'bg-gray-100 text-gray-800'
           }`}
         >
@@ -103,17 +122,28 @@ export const UserApplicationCard: React.FC<Props> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {app.softCopyUrl && (
+            {app.softCopyDriveUrl ? (
               <a
-                href={app.softCopyUrl}
+                href={app.softCopyDriveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-sky-300 text-sky-800 rounded-lg text-xs font-bold hover:bg-sky-100"
               >
-                <FileDown className="w-4 h-4 text-sky-600" />
-                <span>সফট কপি দেখুন</span>
+                <ExternalLink className="w-4 h-4 text-sky-600" />
+                <span>সফট কপি দেখুন (ড্রাইভ) ↗</span>
               </a>
-            )}
+            ) : hasSoft ? (
+              <Button
+                size="sm"
+                variant="outline"
+                loading={openingFile}
+                onClick={() => handleOpenFile(getFileId.softcopy(app.id), `softcopy_${app.id}.pdf`, 'open')}
+                icon={<FileDown className="w-4 h-4 text-sky-600" />}
+                className="text-sky-800 border-sky-300 bg-white hover:bg-sky-100"
+              >
+                সফট কপি দেখুন
+              </Button>
+            ) : null}
 
             <Button
               size="sm"
@@ -138,17 +168,28 @@ export const UserApplicationCard: React.FC<Props> = ({
         </div>
       )}
 
-      {app.status === 'applied' && app.paidCopyUrl && (
+      {app.status === 'applied' && (
         <div className="pt-2 flex justify-end">
-          <a
-            href={app.paidCopyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
-          >
-            <FileDown className="w-4 h-4" />
-            <span>অফিসিয়াল পেইড কপি ডাউনলোড করুন</span>
-          </a>
+          {app.paidCopyDriveUrl ? (
+            <a
+              href={app.paidCopyDriveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>অফিসিয়াল পেইড কপি ডাউনলোড করুন (ড্রাইভ) ↗</span>
+            </a>
+          ) : hasPaid ? (
+            <Button
+              variant="success"
+              loading={openingFile}
+              onClick={() => handleOpenFile(getFileId.paidcopy(app.id), `paidcopy_${app.id}.pdf`, 'download')}
+              icon={<FileDown className="w-4 h-4" />}
+            >
+              অফিসিয়াল পেইড কপি ডাউনলোড করুন
+            </Button>
+          ) : null}
         </div>
       )}
     </div>

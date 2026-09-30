@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { JobApplication } from '../../types';
 import { Button } from '../common/Button';
+import { downloadOrOpenFile, getFileId } from '../../services/files';
 import {
   MessageCircle,
   XCircle,
@@ -11,6 +12,7 @@ import {
   FileDown,
   CheckCheck,
   AlertTriangle,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface Props {
@@ -30,6 +32,8 @@ export const ApplicationCardItem: React.FC<Props> = ({
   onOpenSoftCopyModal,
   onOpenCompleteModal,
 }) => {
+  const [openingFile, setOpeningFile] = useState(false);
+
   const getWhatsAppLink = (mobileNo: string, appId: string) => {
     const cleanNum = mobileNo.replace(/\D/g, '');
     const intlNum = cleanNum.startsWith('880') ? cleanNum : `880${cleanNum.replace(/^0/, '')}`;
@@ -37,64 +41,70 @@ export const ApplicationCardItem: React.FC<Props> = ({
     return `https://wa.me/${intlNum}?text=${msg}`;
   };
 
+  const handleOpenFile = async (fileId: string, filename: string, mode: 'open' | 'download' = 'open') => {
+    setOpeningFile(true);
+    try {
+      await downloadOrOpenFile(fileId, filename, mode);
+    } catch (e: any) {
+      alert(e.message || 'ফাইল খুলতে সমস্যা হয়েছে');
+    } finally {
+      setOpeningFile(false);
+    }
+  };
+
+  const dateStr = app.createdAt?.toDate
+    ? app.createdAt.toDate().toLocaleString('bn-BD')
+    : 'সদ্য জমা';
+
+  const hasScreenshot = Boolean(app.payment?.hasScreenshot || app.payment?.screenshotUrl || app.payment?.screenshotPath);
+  const hasSoft = Boolean(app.hasSoftCopy || app.softCopyUrl || app.softCopyPath);
+  const hasPaid = Boolean(app.hasPaidCopy || app.paidCopyUrl || app.paidCopyPath);
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-6 shadow-xs space-y-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-extrabold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-md">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs font-extrabold bg-gray-100 text-gray-800 px-2.5 py-1 rounded">
             {app.id}
           </span>
-          <span className="text-xs text-gray-400">•</span>
-          <span className="text-xs text-gray-500">{app.jobTitle}</span>
+          <span className="text-xs text-gray-500">{dateStr}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <a
-            href={getWhatsAppLink(app.smsNumber || app.mobile, app.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold border border-emerald-200 transition-colors"
-            title="প্রার্থীকে WhatsApp বার্তা পাঠান"
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>WhatsApp</span>
-          </a>
-
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold ${
-              app.status === 'applied'
-                ? 'bg-emerald-100 text-emerald-800'
-                : app.status === 'payment_now'
-                ? 'bg-rose-100 text-rose-800'
-                : app.status === 'correction'
-                ? 'bg-amber-100 text-amber-800'
-                : app.status === 'checking'
-                ? 'bg-sky-100 text-sky-800'
-                : 'bg-amber-50 text-amber-800'
-            }`}
-          >
-            {app.status}
-          </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {app.mobile && (
+            <a
+              href={getWhatsAppLink(app.mobile, app.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>হোয়াটসঅ্যাপ</span>
+            </a>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
         <div>
-          <span className="text-gray-400 block">প্রার্থী:</span>
-          <span className="font-bold text-gray-900 break-words">{app.fullName}</span>
+          <span className="text-gray-400 block mb-0.5">চাকরির নাম:</span>
+          <span className="font-bold text-gray-900 block break-words">{app.jobTitle}</span>
         </div>
         <div>
-          <span className="text-gray-400 block">পদ ও জেলা:</span>
-          <span className="font-semibold text-gray-800 break-words">{app.postName} ({app.district})</span>
+          <span className="text-gray-400 block mb-0.5">পদ ও জেলা:</span>
+          <span className="font-bold text-gray-800 block break-words">
+            {app.postName} ({app.district})
+          </span>
         </div>
         <div>
-          <span className="text-gray-400 block">মোবাইল:</span>
-          <span className="font-semibold text-gray-800 break-words">{app.smsNumber}</span>
+          <span className="text-gray-400 block mb-0.5">প্রার্থীর নাম ও মোবাইল:</span>
+          <span className="font-semibold text-gray-900 block break-words">{app.fullName}</span>
+          <span className="text-[11px] text-gray-500 block break-words">{app.smsNumber || app.mobile}</span>
         </div>
         <div>
-          <span className="text-gray-400 block">পেমেন্ট ও TrxID:</span>
-          <span className="font-mono font-bold text-emerald-700 break-all block">
-            ৳{app.fee?.total} ({app.payment?.method}) • {app.payment?.trxId}
+          <span className="text-gray-400 block mb-0.5">পেমেন্ট বিবরণ:</span>
+          <span className="font-semibold text-gray-800 block break-all">
+            ৳{app.fee?.total} ({app.payment?.method}) • Trx: {app.payment?.trxId}
           </span>
           {app.payment?.senderNumber && (
             <span className="text-[10px] text-gray-500 block break-words">প্রেরক: {app.payment.senderNumber}</span>
@@ -102,16 +112,18 @@ export const ApplicationCardItem: React.FC<Props> = ({
         </div>
       </div>
 
-      {app.payment?.screenshotUrl && (
-        <div className="text-xs">
-          <a
-            href={app.payment.screenshotUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-emerald-700 underline font-semibold"
+      {/* Payment screenshot button */}
+      {hasScreenshot && (
+        <div className="text-xs pt-1">
+          <button
+            type="button"
+            disabled={openingFile}
+            onClick={() => handleOpenFile(getFileId.screenshot(app.id), `screenshot_${app.id}.jpg`, 'open')}
+            className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline bg-emerald-50 px-2.5 py-1 rounded"
           >
-            পেমেন্ট স্ক্রিনশট দেখুন ↗
-          </a>
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>পেমেন্ট স্ক্রিনশট দেখুন (getFile) ↗</span>
+          </button>
         </div>
       )}
 
@@ -150,22 +162,33 @@ export const ApplicationCardItem: React.FC<Props> = ({
               Autofill-এ পাঠান
             </Button>
             <Button size="sm" onClick={() => onOpenSoftCopyModal(app)} icon={<Upload className="w-3.5 h-3.5" />}>
-              সফট কপি PDF আপলোড
+              সফট কপি সরবরাহ
             </Button>
           </>
         )}
 
         {(app.status === 'checking' || app.status === 'correction') && (
           <>
-            {app.softCopyUrl && (
-              <a href={app.softCopyUrl} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="outline" icon={<FileDown className="w-3.5 h-3.5" />}>
-                  বর্তমান সফট কপি
+            {app.softCopyDriveUrl ? (
+              <a href={app.softCopyDriveUrl} target="_blank" rel="noreferrer">
+                <Button size="sm" variant="outline" icon={<ExternalLink className="w-3.5 h-3.5" />}>
+                  সফট কপি দেখুন (ড্রাইভ) ↗
                 </Button>
               </a>
-            )}
+            ) : hasSoft ? (
+              <Button
+                size="sm"
+                variant="outline"
+                loading={openingFile}
+                onClick={() => handleOpenFile(getFileId.softcopy(app.id), `softcopy_${app.id}.pdf`, 'open')}
+                icon={<FileDown className="w-3.5 h-3.5" />}
+              >
+                বর্তমান সফট কপি দেখুন
+              </Button>
+            ) : null}
+
             <Button size="sm" onClick={() => onOpenSoftCopyModal(app)} icon={<Upload className="w-3.5 h-3.5" />}>
-              নতুন সংশোধিত কপি আপলোড
+              সংশোধিত সফট কপি আপলোড
             </Button>
           </>
         )}
@@ -176,12 +199,26 @@ export const ApplicationCardItem: React.FC<Props> = ({
           </Button>
         )}
 
-        {app.status === 'applied' && app.paidCopyUrl && (
-          <a href={app.paidCopyUrl} target="_blank" rel="noreferrer">
-            <Button size="sm" variant="outline" icon={<FileDown className="w-3.5 h-3.5" />}>
-              পেইড কপি PDF ডাউনলোড
-            </Button>
-          </a>
+        {app.status === 'applied' && (
+          <>
+            {app.paidCopyDriveUrl ? (
+              <a href={app.paidCopyDriveUrl} target="_blank" rel="noreferrer">
+                <Button size="sm" variant="outline" icon={<ExternalLink className="w-3.5 h-3.5" />}>
+                  পেইড কপি দেখুন (ড্রাইভ) ↗
+                </Button>
+              </a>
+            ) : hasPaid ? (
+              <Button
+                size="sm"
+                variant="outline"
+                loading={openingFile}
+                onClick={() => handleOpenFile(getFileId.paidcopy(app.id), `paidcopy_${app.id}.pdf`, 'open')}
+                icon={<FileDown className="w-3.5 h-3.5" />}
+              >
+                পেইড কপি PDF দেখুন
+              </Button>
+            ) : null}
+          </>
         )}
       </div>
     </div>

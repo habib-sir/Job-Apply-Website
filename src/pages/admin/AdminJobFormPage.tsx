@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage, handleFirestoreError, OperationType } from '../../services/firebase';
+import { db, handleFirestoreError, OperationType } from '../../services/firebase';
+import {
+  saveFile,
+  getFile,
+  getFileId,
+  compressImageToDataUrl,
+  FILE_LIMITS,
+} from '../../services/files';
+import { syncJobToFeed } from '../../services/feed';
 import { JobCircular, JobCategory, JobStatus, JobPostItem } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
@@ -12,7 +19,7 @@ import { RichTextEditor } from '../../components/common/RichTextEditor';
 import { JobPostsTableSection } from '../../components/admin/JobPostsTableSection';
 import { generateSlug } from '../../utils/slugify';
 import { useToast } from '../../components/common/Toast';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 
 export const AdminJobFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +29,7 @@ export const AdminJobFormPage: React.FC = () => {
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [jobId] = useState<string>(() => id || doc(collection(db, 'jobs')).id);
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -34,8 +42,10 @@ export const AdminJobFormPage: React.FC = () => {
   const [applyServiceEnabled, setApplyServiceEnabled] = useState(true);
   const [applicationFee, setApplicationFee] = useState<number>(100);
   const [serviceCharge, setServiceCharge] = useState<number>(50);
-  const [featuredImage, setFeaturedImage] = useState('');
-  const [circularFile, setCircularFile] = useState('');
+  const [hasCover, setHasCover] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string>('');
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [circularLink, setCircularLink] = useState('');
   const [posts, setPosts] = useState<JobPostItem[]>([{ name: '', count: 1, district: 'ALL' }]);
 
   useEffect(() => {
@@ -54,9 +64,24 @@ export const AdminJobFormPage: React.FC = () => {
           setApplyServiceEnabled(Boolean(data.applyServiceEnabled));
           setApplicationFee(data.applicationFee || 0);
           setServiceCharge(data.serviceCharge || 0);
-          setFeaturedImage(data.featuredImage || '');
-          setCircularFile(data.circularFile || '');
+          setCircularLink(data.circularLink || data.circularFile || '');
           setPosts(data.posts || [{ name: '', count: 1, district: 'ALL' }]);
+
+          const hasCov = Boolean(data.hasCover || data.featuredImage);
+          setHasCover(hasCov);
+
+          if (hasCov) {
+            try {
+              const fileDoc = await getFile(getFileId.cover(id));
+              if (fileDoc?.data) {
+                setCoverPreview(fileDoc.data);
+              } else if (data.featuredImage) {
+                setCoverPreview(data.featuredImage);
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
 
           if (data.deadline) {
             const dateObj = data.deadline.toDate ? data.deadline.toDate() : new Date(data.deadline);
@@ -81,15 +106,42 @@ export const AdminJobFormPage: React.FC = () => {
     if (!isEdit || !slug) setSlug(generateSlug(val));
   };
 
-  const handleFileUpload = async (file: File, type: 'featured' | 'circular') => {
-    const jobId = id || doc(collection(db, 'jobs')).id;
-    const ext = file.name.split('.').pop() || 'bin';
-    const storageRef = ref(storage, `jobs/${jobId}/${type}.${ext}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    if (type === 'featured') setFeaturedImage(url);
-    else setCircularFile(url);
-    success('ফাইল আপলোড হয়েছে!');
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCoverUploading(true);
+    try {
+      // Auto compress to <=100KB JPEG
+      const compressed = await compressImageToDataUrl(
+        file,
+        800,
+        500,
+        FILE_LIMITS.COVER,
+        'image/jpeg'
+      );
+
+      if (compressed.sizeBytes > FILE_LIMITS.COVER) {
+        throw new Error('কভার ইমেজের সাইজ সর্বোচ্চ ১০০ KB হতে পারবে');
+      }
+
+      await saveFile({
+        id: getFileId.cover(jobId),
+        ownerUid: 'admin',
+        kind: 'cover',
+        mime: 'image/jpeg',
+        sizeBytes: compressed.sizeBytes,
+        data: compressed.dataUrl,
+      });
+
+      setHasCover(true);
+      setCoverPreview(compressed.dataUrl);
+      success('কভার ইমেজ সফলভাবে সেভ হয়েছে (১০০ KB-এর নিচে)');
+    } catch (err: any) {
+      error(err.message || 'কভার ইমেজ আপলোড ব্যর্থ হয়েছে');
+    } finally {
+      setCoverUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,21 +153,23 @@ export const AdminJobFormPage: React.FC = () => {
 
     setSaving(true);
     try {
-      const jobId = id || doc(collection(db, 'jobs')).id;
+      const deadlineDate = deadline ? new Date(deadline) : null;
+      const pubDate = status === 'scheduled' && publishedAt ? new Date(publishedAt) : serverTimestamp();
+
       const jobData = {
         title,
         slug: slug.trim(),
         category,
         status,
         content,
-        deadline: deadline ? new Date(deadline) : null,
-        publishedAt: status === 'scheduled' && publishedAt ? new Date(publishedAt) : serverTimestamp(),
+        deadline: deadlineDate,
+        publishedAt: pubDate,
         applyLink: applyLink.trim(),
         applyServiceEnabled,
         applicationFee: Number(applicationFee) || 0,
         serviceCharge: Number(serviceCharge) || 0,
-        featuredImage: featuredImage || null,
-        circularFile: circularFile || null,
+        hasCover,
+        circularLink: circularLink.trim() || null,
         posts,
         photoSpec: { width: 300, height: 300, maxKB: 100 },
         signatureSpec: { width: 300, height: 80, maxKB: 60 },
@@ -129,9 +183,21 @@ export const AdminJobFormPage: React.FC = () => {
         await setDoc(doc(db, 'jobs', jobId), { ...jobData, createdAt: serverTimestamp() });
         success('নতুন সার্কুলার প্রকাশ করা হয়েছে');
       }
+
+      // Sync to feed/latest transactionally
+      await syncJobToFeed(
+        jobId,
+        {
+          ...jobData,
+          deadline: deadlineDate,
+          publishedAt: status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date(),
+        },
+        'upsert'
+      );
+
       navigate('/admin/jobs');
     } catch (err: any) {
-      handleFirestoreError(err, isEdit ? OperationType.UPDATE : OperationType.CREATE, `jobs/${id || 'new'}`);
+      handleFirestoreError(err, isEdit ? OperationType.UPDATE : OperationType.CREATE, `jobs/${jobId}`);
       error('সার্কুলার সেভ করতে ব্যর্থ হয়েছে');
     } finally {
       setSaving(false);
@@ -236,18 +302,48 @@ export const AdminJobFormPage: React.FC = () => {
         <RichTextEditor label="সার্কুলারের সম্পূর্ণ বিবরণ (HTML Content)" value={content} onChange={setContent} />
       </div>
 
+      {/* Cover Image & Circular Link Section */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">সার্কুলার এটাচমেন্ট ও ছবি</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">ফিচার্ড ব্যানার ছবি</label>
-            <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'featured')} className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-emerald-50 file:text-emerald-700" />
-            {featuredImage && <a href={featuredImage} target="_blank" rel="noreferrer" className="text-[11px] text-emerald-600 block mt-1 underline">ছবি দেখুন ↗</a>}
+        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">
+          কভার ইমেজ ও সার্কুলার লিংক (০ খরচে ফায়ারস্টোর স্টোরেজ)
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Cover image (≤100KB, lazy loaded on details page only) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-gray-700">
+              ছোট কভার ইমেজ (সর্বোচ্চ ১০০ KB, বিস্তারিত পেজে প্রদর্শিত)
+            </label>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-semibold cursor-pointer hover:bg-emerald-100 border border-emerald-200">
+                <Upload className="w-3.5 h-3.5" />
+                <span>{coverUploading ? 'সংকোচন হচ্ছে...' : 'কভার নির্বাচন করুন'}</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleCoverUpload}
+                  className="hidden"
+                  disabled={coverUploading}
+                />
+              </label>
+              {hasCover && <span className="text-[11px] text-emerald-700 font-bold">✓ কভার যুক্ত আছে</span>}
+            </div>
+            {coverPreview && (
+              <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 max-w-xs max-h-36">
+                <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">সার্কুলার PDF / স্ক্যান কপি</label>
-            <input type="file" accept="application/pdf,image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'circular')} className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-sky-50 file:text-sky-700" />
-            {circularFile && <a href={circularFile} target="_blank" rel="noreferrer" className="text-[11px] text-sky-600 block mt-1 underline">সার্কুলার ফাইল দেখুন ↗</a>}
+
+          {/* Official circular link field */}
+          <div className="space-y-2">
+            <Input
+              label="সার্কুলার ফাইল লিংক (Google Drive বা অফিসিয়াল সাইট লিংক)"
+              placeholder="https://drive.google.com/... অথবা অফিসিয়াল লিংক"
+              value={circularLink}
+              onChange={(e) => setCircularLink(e.target.value)}
+              helperText="সার্কুলার PDF ফাইলের বদলে গুগল ড্রাইভ বা ওয়েবসাইট লিংক প্রদান করুন"
+            />
           </div>
         </div>
       </div>

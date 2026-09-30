@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { db, storage, handleFirestoreError, OperationType } from '../../services/firebase';
+import { db, handleFirestoreError, OperationType } from '../../services/firebase';
+import { getFile, deleteFile, getFileId } from '../../services/files';
 import { CandidateProfile, ProfileData } from '../../types';
 import { PersonalInfoSection } from '../../components/cv/PersonalInfoSection';
 import { IdentitySection } from '../../components/cv/IdentitySection';
@@ -21,8 +21,8 @@ import { Save, AlertTriangle, ShieldCheck } from 'lucide-react';
 export const UserCVPage: React.FC = () => {
   const { user, mobile } = useAuth();
   const [formData, setFormData] = useState<Partial<ProfileData>>({});
-  const [photoPath, setPhotoPath] = useState<string>('');
-  const [signaturePath, setSignaturePath] = useState<string>('');
+  const [hasPhoto, setHasPhoto] = useState<boolean>(false);
+  const [hasSignature, setHasSignature] = useState<boolean>(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [signatureUrl, setSignatureUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -41,15 +41,19 @@ export const UserCVPage: React.FC = () => {
         if (snap.exists()) {
           const profile = snap.data() as CandidateProfile;
           setFormData(profile.data || {});
-          setPhotoPath(profile.photoPath || '');
-          setSignaturePath(profile.signaturePath || '');
+          const hasP = Boolean(profile.hasPhoto || profile.photoPath || profile.photoUrl);
+          const hasS = Boolean(profile.hasSignature || profile.signaturePath || profile.signatureUrl);
+          setHasPhoto(hasP);
+          setHasSignature(hasS);
 
           if (profile.photoUrl) {
             setPhotoUrl(profile.photoUrl);
-          } else if (profile.photoPath) {
+          } else if (hasP) {
             try {
-              const url = await getDownloadURL(ref(storage, profile.photoPath));
-              setPhotoUrl(url);
+              const fileDoc = await getFile(getFileId.photo(user.uid));
+              if (fileDoc?.data) {
+                setPhotoUrl(fileDoc.data);
+              }
             } catch (e) {
               // Ignore fallback warning
             }
@@ -57,10 +61,12 @@ export const UserCVPage: React.FC = () => {
 
           if (profile.signatureUrl) {
             setSignatureUrl(profile.signatureUrl);
-          } else if (profile.signaturePath) {
+          } else if (hasS) {
             try {
-              const url = await getDownloadURL(ref(storage, profile.signaturePath));
-              setSignatureUrl(url);
+              const fileDoc = await getFile(getFileId.signature(user.uid));
+              if (fileDoc?.data) {
+                setSignatureUrl(fileDoc.data);
+              }
             } catch (e) {
               // Ignore fallback warning
             }
@@ -199,10 +205,8 @@ export const UserCVPage: React.FC = () => {
         presentDistrict: finalData.presentDistrict,
         permanentDistrict: finalData.permanentDistrict,
         mobile: finalData.mobile,
-        photoPath: photoPath || undefined,
-        signaturePath: signaturePath || undefined,
-        photoUrl: photoUrl || undefined,
-        signatureUrl: signatureUrl || undefined,
+        hasPhoto: Boolean(hasPhoto || photoUrl),
+        hasSignature: Boolean(hasSignature || signatureUrl),
         updatedAt: serverTimestamp(),
       };
 
@@ -221,6 +225,12 @@ export const UserCVPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteDoc(doc(db, 'profiles', user.uid));
+      try {
+        await deleteFile(getFileId.photo(user.uid));
+        await deleteFile(getFileId.signature(user.uid));
+      } catch (e) {
+        // Non-fatal
+      }
       setFormData({
         mobile: mobile || '',
         nationality: 'Bangladeshi',
@@ -229,8 +239,8 @@ export const UserCVPage: React.FC = () => {
       });
       setPhotoUrl('');
       setSignatureUrl('');
-      setPhotoPath('');
-      setSignaturePath('');
+      setHasPhoto(false);
+      setHasSignature(false);
       setDeleteModalOpen(false);
       success('আপনার সিভি মুছে ফেলা হয়েছে।');
     } catch (err: any) {
@@ -271,14 +281,14 @@ export const UserCVPage: React.FC = () => {
         uid={user?.uid || ''}
         photoUrl={photoUrl}
         signatureUrl={signatureUrl}
-        onPhotoUploaded={(path, url) => {
-          setPhotoPath(path);
-          setPhotoUrl(url);
+        onPhotoUploaded={(dataUrl) => {
+          setPhotoUrl(dataUrl);
+          setHasPhoto(true);
           success('ছবি সফলভাবে আপলোড হয়েছে!');
         }}
-        onSignatureUploaded={(path, url) => {
-          setSignaturePath(path);
-          setSignatureUrl(url);
+        onSignatureUploaded={(dataUrl) => {
+          setSignatureUrl(dataUrl);
+          setHasSignature(true);
           success('স্বাক্ষর সফলভাবে আপলোড হয়েছে!');
         }}
       />

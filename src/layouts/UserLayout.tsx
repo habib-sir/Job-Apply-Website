@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 export const UserLayout: React.FC = () => {
@@ -31,7 +31,8 @@ export const UserLayout: React.FC = () => {
       const q = query(
         collection(db, 'notifications'),
         where('uid', '==', user.uid),
-        where('read', '==', false)
+        where('read', '==', false),
+        limit(20)
       );
       const unsubscribe = onSnapshot(
         q,

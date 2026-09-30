@@ -83,7 +83,11 @@ export const ApplyJobPage: React.FC = () => {
   }
 
   const completeness = profile?.data
-    ? calculateCVCompleteness(profile.data, Boolean(profile.photoUrl || profile.photoPath), Boolean(profile.signatureUrl || profile.signaturePath))
+    ? calculateCVCompleteness(
+        profile.data,
+        Boolean(profile.hasPhoto || profile.photoUrl || profile.photoPath),
+        Boolean(profile.hasSignature || profile.signatureUrl || profile.signaturePath)
+      )
     : { percentage: 0, missingFields: ['সম্পূর্ণ সিভি'] };
 
   if (completeness.percentage < 100) {

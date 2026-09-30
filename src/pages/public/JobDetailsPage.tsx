@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { getFile, getFileId } from '../../services/files';
+import { getCached, setCached } from '../../services/cache';
 import { JobCircular } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
 import { Button } from '../../components/common/Button';
@@ -13,7 +15,7 @@ import {
   Send,
   AlertCircle,
   ArrowLeft,
-  Download,
+  ExternalLink,
   Users,
   CheckCircle2,
 } from 'lucide-react';
@@ -23,24 +25,42 @@ import { useAuth } from '../../context/AuthContext';
 export const JobDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [job, setJob] = useState<JobCircular | null>(null);
+  const [coverDataUrl, setCoverDataUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // 1 Single Read for Job Details (with 5-minute in-memory cache)
   useEffect(() => {
     const fetchJob = async () => {
       if (!slug) return;
+      const cacheKey = `job_detail_${slug}`;
+      const cached = getCached<JobCircular>(cacheKey);
+
+      if (cached) {
+        setJob(cached);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const q = query(collection(db, 'jobs'), where('slug', '==', slug));
+        // Query by slug with limit 1
+        const q = query(collection(db, 'jobs'), where('slug', '==', slug), limit(1));
         const snap = await getDocs(q);
+
         if (!snap.empty) {
           const docItem = snap.docs[0];
-          setJob({ id: docItem.id, ...docItem.data() } as JobCircular);
+          const jobData = { id: docItem.id, ...docItem.data() } as JobCircular;
+          setCached(cacheKey, jobData);
+          setJob(jobData);
         } else {
+          // Fallback doc ID lookup
           const docRef = doc(db, 'jobs', slug);
           const singleSnap = await getDoc(docRef);
           if (singleSnap.exists()) {
-            setJob({ id: singleSnap.id, ...singleSnap.data() } as JobCircular);
+            const jobData = { id: singleSnap.id, ...singleSnap.data() } as JobCircular;
+            setCached(cacheKey, jobData);
+            setJob(jobData);
           }
         }
       } catch (err) {
@@ -51,6 +71,28 @@ export const JobDetailsPage: React.FC = () => {
     };
     fetchJob();
   }, [slug]);
+
+  // Lazy load cover image separately only on details page (files/job_{jobId}_cover)
+  useEffect(() => {
+    if (!job) return;
+
+    if (job.featuredImage) {
+      setCoverDataUrl(job.featuredImage);
+      return;
+    }
+
+    if (job.hasCover) {
+      getFile(getFileId.cover(job.id))
+        .then((fileDoc) => {
+          if (fileDoc?.data) {
+            setCoverDataUrl(fileDoc.data);
+          }
+        })
+        .catch(() => {
+          // Ignore
+        });
+    }
+  }, [job?.id]);
 
   if (loading) {
     return (
@@ -80,6 +122,7 @@ export const JobDetailsPage: React.FC = () => {
     : null;
 
   const isExpired = deadlineDate ? deadlineDate.getTime() < now.getTime() : false;
+  const circularLink = job.circularLink || job.circularFile;
 
   const handleApplyClick = () => {
     if (!user) {
@@ -101,7 +144,6 @@ export const JobDetailsPage: React.FC = () => {
         />
         <meta property="og:title" content={job.title} />
         <meta property="og:description" content="টেলিটকে অনলাইনে নির্ভুলভাবে আবেদনের সুযোগ।" />
-        {job.featuredImage && <meta property="og:image" content={job.featuredImage} />}
       </Helmet>
 
       <Link
@@ -157,10 +199,10 @@ export const JobDetailsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Featured Image if any */}
-        {job.featuredImage && (
+        {/* Lazy Loaded Cover Image (Only on details page) */}
+        {coverDataUrl && (
           <div className="rounded-xl overflow-hidden border border-gray-200">
-            <img src={job.featuredImage} alt={job.title} className="w-full max-h-96 object-cover" />
+            <img src={coverDataUrl} alt={job.title} className="w-full max-h-96 object-cover" />
           </div>
         )}
 
@@ -208,21 +250,21 @@ export const JobDetailsPage: React.FC = () => {
           />
         </div>
 
-        {/* Circular File / PDF Attachment Download */}
-        {job.circularFile && (
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+        {/* Circular Link Field */}
+        {circularLink && (
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="text-xs text-emerald-900">
-              <span className="font-bold block">অফিসিয়াল সার্কুলার ফাইল / নোটিশ</span>
-              <span>মূল সার্কুলারটি পড়তে বা ডাউনলোড করতে পাশের বাটনে ক্লিক করুন।</span>
+              <span className="font-bold block">অফিসিয়াল সার্কুলার ফাইল / নোটিশ লিংক</span>
+              <span>মূল সার্কুলারটি পড়তে বা দেখতে পাশের লিংকে ক্লিক করুন।</span>
             </div>
             <a
-              href={job.circularFile}
+              href={circularLink}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
             >
-              <Download className="w-4 h-4" />
-              <span>সার্কুলার দেখুন</span>
+              <ExternalLink className="w-4 h-4" />
+              <span>সার্কুলার লিংক দেখুন ↗</span>
             </a>
           </div>
         )}
