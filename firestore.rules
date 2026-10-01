@@ -74,9 +74,9 @@ service cloud.firestore {
     }
 
     match /trxIds/{trxId} {
-      allow read: if isAdmin();
+      allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     match /counters/{id} {

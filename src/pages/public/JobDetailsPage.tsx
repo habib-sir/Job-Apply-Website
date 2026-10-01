@@ -227,8 +227,8 @@ export const JobDetailsPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {job.posts.map((p, idx) => {
-                    const postAppFee = p.applicationFee ?? job.applicationFee;
-                    const postServiceCharge = p.serviceCharge ?? job.serviceCharge;
+                    const postAppFee = p.applicationFee != null && !isNaN(p.applicationFee) ? p.applicationFee : (job.applicationFee || 0);
+                    const postServiceCharge = p.serviceCharge != null && !isNaN(p.serviceCharge) ? p.serviceCharge : (job.serviceCharge != null ? job.serviceCharge : 10);
                     const postTotal = postAppFee + postServiceCharge;
 
                     return (

@@ -44,8 +44,8 @@ export const AdminJobFormPage: React.FC = () => {
   const [deadline, setDeadline] = useState('');
   const [applyLink, setApplyLink] = useState('');
   const [applyServiceEnabled, setApplyServiceEnabled] = useState(true);
-  const [applicationFee, setApplicationFee] = useState<number>(100);
-  const [serviceCharge, setServiceCharge] = useState<number>(50);
+  const [applicationFee, setApplicationFee] = useState<number>(0);
+  const [serviceCharge, setServiceCharge] = useState<number>(10);
   const [hasCover, setHasCover] = useState(false);
   const [coverPreview, setCoverPreview] = useState<string>('');
   const [coverUploading, setCoverUploading] = useState(false);
@@ -309,13 +309,43 @@ export const AdminJobFormPage: React.FC = () => {
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-gray-900">
-          <input type="checkbox" checked={applyServiceEnabled} onChange={(e) => setApplyServiceEnabled(e.target.checked)} className="w-4 h-4 text-emerald-600 rounded" />
+          <input
+            type="checkbox"
+            checked={applyServiceEnabled}
+            onChange={(e) => setApplyServiceEnabled(e.target.checked)}
+            className="w-4 h-4 text-emerald-600 rounded"
+          />
           <span>আমাদের অনলাইন আবেদন সেবা চালু রাখুন</span>
         </label>
         {applyServiceEnabled && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <Input label="টেলিটক আবেদন ফি (৳)" type="number" value={applicationFee} onChange={(e) => setApplicationFee(Number(e.target.value))} requiredStar />
-            <Input label="আমাদের সার্ভিস চার্জ (৳)" type="number" value={serviceCharge} onChange={(e) => setServiceCharge(Number(e.target.value))} requiredStar />
+          <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  label="আমাদের অনলাইন আবেদন ফি / সার্ভিস চার্জ (৳)"
+                  type="number"
+                  value={serviceCharge}
+                  onChange={(e) => setServiceCharge(Number(e.target.value))}
+                  requiredStar
+                  placeholder="১০"
+                />
+                <p className="text-[11px] text-emerald-800 mt-1">
+                  💡 প্রতিটি ভিন্ন ভিন্ন পদের সরকারি ফি&apos;র সাথে এই <strong>{serviceCharge || 10} টাকা</strong> যোগ হয়ে মোট ফি নির্ধারিত হবে।
+                </p>
+              </div>
+              <div>
+                <Input
+                  label="সাধারণ সরকারি আবেদন ফি (৳) (ঐচ্ছিক)"
+                  type="number"
+                  value={applicationFee || ''}
+                  onChange={(e) => setApplicationFee(Number(e.target.value) || 0)}
+                  placeholder="যেমন: ৫০ বা ১০০ বা ২২৩"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  নিচের &ldquo;পদের তালিকা&rdquo; সেকশনে প্রতিটি পদের নির্দিষ্ট সরকারি ফি দিলে স্বয়ংক্রিয়ভাবে সেটাই কার্যকর হবে।
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

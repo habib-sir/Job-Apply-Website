@@ -97,11 +97,11 @@ export const JobPostsTableSection: React.FC<Props> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-gray-200/60">
               <div>
                 <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
-                  এই পদের টেলিটক/সরকারি ফি (৳) <span className="text-gray-400 font-normal">(খালি রাখলে ডিফল্ট ফি প্রযোজ্য)</span>
+                  এই পদের টেলিটক/সরকারি ফি (৳) <span className="text-gray-400 font-normal">(যেমন: ৫০, ১০০, ১১২, ২২৩, ৬৬৭)</span>
                 </label>
                 <Input
                   type="number"
-                  placeholder="যেমন: ৬৬৭ বা ২২৩"
+                  placeholder="যেমন: ৫০ বা ২২৩"
                   value={post.applicationFee !== undefined ? post.applicationFee : ''}
                   onChange={(e) => {
                     const val = e.target.value === '' ? undefined : Number(e.target.value);
@@ -112,11 +112,11 @@ export const JobPostsTableSection: React.FC<Props> = ({
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
-                  এই পদের সার্ভিস চার্জ (৳) <span className="text-gray-400 font-normal">(খালি রাখলে ডিফল্ট চার্জ প্রযোজ্য)</span>
+                  আমাদের সার্ভিস চার্জ (৳) <span className="text-emerald-700 font-medium">(খালি রাখলে সার্কুলারের ১০ টাকা ডিফল্ট)</span>
                 </label>
                 <Input
                   type="number"
-                  placeholder="যেমন: ৫০"
+                  placeholder="১০"
                   value={post.serviceCharge !== undefined ? post.serviceCharge : ''}
                   onChange={(e) => {
                     const val = e.target.value === '' ? undefined : Number(e.target.value);

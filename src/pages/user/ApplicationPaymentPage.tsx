@@ -178,10 +178,13 @@ export const ApplicationPaymentPage: React.FC = () => {
       success('আপনার আবেদন যাচাইয়ের অপেক্ষায় আছে!');
       navigate('/applications/waiting', { replace: true });
     } catch (err: any) {
+      console.error('Payment submit error:', err);
       if (err.message && err.message.includes('Transaction ID আগেই ব্যবহার হয়েছে')) {
         setLocalError(err.message);
+      } else if (err.message && err.message.toLowerCase().includes('permission')) {
+        setLocalError('অনুমোদন যাচাই ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা পুনরায় লগইন করুন।');
       } else {
-        setLocalError('পেমেন্ট সাবমিট করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
+        setLocalError(err?.message || 'পেমেন্ট সাবমিট করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
       }
     } finally {
       setSubmitting(false);
