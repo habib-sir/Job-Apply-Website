@@ -20,17 +20,23 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+const databaseId =
+  import.meta.env.VITE_FIREBASE_DATABASE_ID ||
+  (defaultAppletConfig as any).firestoreDatabaseId;
+
 let firestoreInstance;
 try {
-  firestoreInstance = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
-  });
+  firestoreInstance = databaseId
+    ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true }, databaseId)
+    : initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 } catch {
   // If already initialized or fallback
   try {
-    firestoreInstance = getFirestore(app);
+    firestoreInstance = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   } catch {
-    firestoreInstance = initializeFirestore(app, {});
+    firestoreInstance = databaseId
+      ? initializeFirestore(app, {}, databaseId)
+      : initializeFirestore(app, {});
   }
 }
 
