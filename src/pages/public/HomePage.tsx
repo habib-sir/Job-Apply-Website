@@ -17,29 +17,41 @@ export const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       try {
-        // High-efficiency single read from feed/latest (or 0 reads if in 5-min cache)
-        const feedPosts = await getFeedLatest();
-        setJobs(feedPosts);
-
-        // Exams with 5-minute cache
         const cachedExams = getCached<ExamNotice[]>('exams_home');
-        if (cachedExams) {
-          setExamNotices(cachedExams);
-        } else {
-          const examSnap = await getDocs(query(collection(db, 'exams'), limit(4)));
-          const exams = examSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ExamNotice));
-          setCached('exams_home', exams);
-          setExamNotices(exams);
+        const examPromise = cachedExams
+          ? Promise.resolve(cachedExams)
+          : getDocs(query(collection(db, 'exams'), limit(4)))
+              .then((examSnap) => {
+                const exams = examSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ExamNotice));
+                setCached('exams_home', exams);
+                return exams;
+              })
+              .catch(() => [] as ExamNotice[]);
+
+        const [feedPosts, exams] = await Promise.all([
+          getFeedLatest().catch(() => [] as FeedJobSummary[]),
+          examPromise,
+        ]);
+
+        if (isMounted) {
+          setJobs(feedPosts || []);
+          setExamNotices(exams || []);
         }
       } catch (err) {
         // Silently handled
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     fetchData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const now = new Date();

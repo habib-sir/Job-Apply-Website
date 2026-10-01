@@ -30,6 +30,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isOwnerEmail = (emailToCheck?: string | null) => {
+  if (!emailToCheck) return false;
+  const em = emailToCheck.toLowerCase().trim();
+  return em === 'masterboom2040@gmail.com' || em === 'admin@studyonlinebd.com';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -45,11 +51,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentUser) {
         setUser(currentUser);
         try {
-          // Check if admin first
+          const isOwner = isOwnerEmail(currentUser.email);
           const adminDocRef = doc(db, 'admins', currentUser.uid);
           const adminDoc = await getDoc(adminDocRef);
 
-          if (adminDoc.exists()) {
+          if (adminDoc.exists() || isOwner) {
+            if (!adminDoc.exists() && isOwner) {
+              try {
+                await setDoc(adminDocRef, {
+                  email: currentUser.email,
+                  role: 'admin',
+                  createdAt: serverTimestamp(),
+                });
+              } catch (e) {
+                // Ignore
+              }
+            }
             setRole('admin');
             setMobile(null);
           } else {
@@ -135,19 +152,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('ইমেইল ও পাসওয়ার্ড প্রদান করুন');
     }
 
+    const cleanEmail = email.trim();
+    const isOwner = isOwnerEmail(cleanEmail);
+
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      let cred;
+      try {
+        cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+      } catch (signInErr: any) {
+        // If owner email doesn't exist in Firebase Auth yet, auto-register as admin
+        if (signInErr.code === 'auth/user-not-found' && isOwner) {
+          cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+        } else {
+          throw signInErr;
+        }
+      }
+
       const adminDocRef = doc(db, 'admins', cred.user.uid);
       const adminDoc = await getDoc(adminDocRef);
 
       if (!adminDoc.exists()) {
-        await signOut(auth);
-        throw new Error('আপনি অ্যাডমিন নন। প্রবেশাধিকার সংরক্ষিত।');
+        if (isOwner) {
+          try {
+            await setDoc(adminDocRef, {
+              email: cred.user.email,
+              role: 'admin',
+              createdAt: serverTimestamp(),
+            });
+          } catch (e) {
+            // Silently handled
+          }
+        } else {
+          await signOut(auth);
+          throw new Error('আপনি অ্যাডমিন নন। প্রবেশাধিকার সংরক্ষিত।');
+        }
       }
       setRole('admin');
     } catch (err: any) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         throw new Error('ইমেইল বা পাসওয়ার্ড সঠিক নয়');
+      }
+      if (err.code === 'auth/unauthorized-domain') {
+        throw new Error('এই ডোমেনটি Firebase Console-এ অনুমোদিত নয়। Firebase Console > Authentication > Settings > Authorized Domains-এ আপনার ডোমেনটি যুক্ত করুন।');
       }
       throw err;
     }
@@ -164,6 +210,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: result.user.displayName,
           photoURL: result.user.photoURL,
         });
+      }
+
+      const isOwner = isOwnerEmail(result.user.email);
+      if (isOwner) {
+        const adminDocRef = doc(db, 'admins', result.user.uid);
+        const adminDoc = await getDoc(adminDocRef);
+        if (!adminDoc.exists()) {
+          try {
+            await setDoc(adminDocRef, {
+              email: result.user.email,
+              role: 'admin',
+              createdAt: serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('Admin doc init warning:', e);
+          }
+        }
+        setRole('admin');
+        return;
       }
 
       // Check / ensure user profile exists in Firestore
@@ -187,6 +252,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         throw new Error('Google লগইন উইন্ডো বন্ধ করা হয়েছে');
+      }
+      if (err.code === 'auth/unauthorized-domain') {
+        throw new Error('এই ডোমেনটি Firebase Console-এ অনুমোদিত নয়। Firebase Console > Authentication > Settings > Authorized Domains-এ আপনার Cloudflare ডোমেন যুক্ত করুন।');
       }
       throw new Error(err.message || 'Google দিয়ে লগইন ব্যর্থ হয়েছে');
     }
