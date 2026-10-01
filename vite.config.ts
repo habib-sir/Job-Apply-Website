@@ -4,7 +4,13 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
+  // Support GitHub Pages subpath (e.g. /Job-Apply-Website/) while keeping root '/' for Cloudflare Pages/local
+  const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
+  const repoName = process.env.GITHUB_REPOSITORY ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/` : '/Job-Apply-Website/';
+  const base = process.env.BASE_PATH || (isGitHubActions ? repoName : '/');
+
   return {
+    base,
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

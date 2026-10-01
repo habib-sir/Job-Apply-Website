@@ -43,7 +43,7 @@ export default function App() {
   return (
     <HelmetProvider>
       <ErrorBoundary>
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <AuthProvider>
             <ToastProvider>
               <Routes>
