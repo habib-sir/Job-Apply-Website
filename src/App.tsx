@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminRoute } from './components/auth/AdminRoute';
 
@@ -41,10 +42,11 @@ import { AdminGoogleDrivePage } from './pages/admin/AdminGoogleDrivePage';
 export default function App() {
   return (
     <HelmetProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <Routes>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <ToastProvider>
+              <Routes>
               {/* Public Routes */}
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<HomePage />} />
@@ -99,6 +101,7 @@ export default function App() {
           </ToastProvider>
         </AuthProvider>
       </BrowserRouter>
-    </HelmetProvider>
-  );
+    </ErrorBoundary>
+  </HelmetProvider>
+);
 }

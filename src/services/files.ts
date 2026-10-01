@@ -88,7 +88,8 @@ export async function getFile(id: string): Promise<StoredFileDoc | null> {
     setCached(cacheKey, data);
     return data;
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, `files/${id}`);
+    console.warn(`File ${id} fetch warning:`, err);
+    return null;
   }
 }
 
