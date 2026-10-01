@@ -41,27 +41,46 @@ export async function getFeedLatest(): Promise<FeedJobSummary[]> {
       return posts;
     }
 
-    // Cold start fallback: If feed/latest doesn't exist yet, seed from published jobs
-    const q = query(
-      collection(db, 'jobs'),
-      where('status', '==', 'published'),
-      limit(30)
-    );
-    const jobsSnap = await getDocs(q);
-    const seededPosts: FeedJobSummary[] = jobsSnap.docs.map((d) => {
-      const j = d.data() as JobCircular;
-      return {
-        id: d.id,
-        title: j.title || '',
-        slug: j.slug || d.id,
-        category: j.category || 'govt',
-        deadline: j.deadline?.toDate ? j.deadline.toDate().toISOString() : j.deadline || null,
-        publishedAt: j.publishedAt?.toDate ? j.publishedAt.toDate().toISOString() : j.publishedAt || null,
-        applyServiceEnabled: Boolean(j.applyServiceEnabled),
-      };
-    });
+    // Cold start fallback: If feed/latest doesn't exist yet, seed from jobs
+    let jobsSnap;
+    try {
+      const q = query(
+        collection(db, 'jobs'),
+        where('status', '==', 'published'),
+        limit(30)
+      );
+      jobsSnap = await getDocs(q);
+    } catch {
+      // Fallback
+    }
 
-    setCached(CACHE_KEY, seededPosts);
+    if (!jobsSnap || jobsSnap.empty) {
+      try {
+        jobsSnap = await getDocs(query(collection(db, 'jobs'), limit(30)));
+      } catch (err) {
+        console.warn('Fallback jobs query error:', err);
+      }
+    }
+
+    const seededPosts: FeedJobSummary[] = (jobsSnap?.docs || [])
+      .map((d) => {
+        const j = d.data() as any;
+        return {
+          id: d.id,
+          title: j.title || '',
+          slug: j.slug || d.id,
+          category: j.category || 'govt',
+          status: j.status || 'published',
+          deadline: j.deadline?.toDate ? j.deadline.toDate().toISOString() : j.deadline || null,
+          publishedAt: j.publishedAt?.toDate ? j.publishedAt.toDate().toISOString() : j.publishedAt || null,
+          applyServiceEnabled: Boolean(j.applyServiceEnabled),
+        };
+      })
+      .filter((p) => p.status !== 'draft');
+
+    if (seededPosts.length > 0) {
+      setCached(CACHE_KEY, seededPosts);
+    }
     return seededPosts;
   } catch (err: any) {
     if (err?.message?.includes('client is offline')) {

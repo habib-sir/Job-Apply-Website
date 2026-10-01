@@ -69,15 +69,33 @@ export const JobsPage: React.FC = () => {
         }
       }
 
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as JobCircular));
+      let snap = await getDocs(q);
+
+      // Fallback: if query with status=='published' returns 0, try fetching jobs collection
+      if (snap.empty && page === 1) {
+        try {
+          const fallbackQ = query(collection(db, 'jobs'), limit(ITEMS_PER_PAGE));
+          const fallbackSnap = await getDocs(fallbackQ);
+          if (!fallbackSnap.empty) {
+            snap = fallbackSnap;
+          }
+        } catch (fbErr) {
+          console.warn('Fallback query notice:', fbErr);
+        }
+      }
+
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as JobCircular))
+        .filter((j) => j.status !== 'draft');
 
       if (snap.docs.length > 0) {
         pageCursorMap.current.set(page, snap.docs[snap.docs.length - 1]);
       }
 
-      setHasMore(snap.docs.length === ITEMS_PER_PAGE);
-      setCached(cacheKey, list);
+      setHasMore(list.length === ITEMS_PER_PAGE);
+      if (list.length > 0) {
+        setCached(cacheKey, list);
+      }
       setJobs(list);
     } catch (e) {
       console.error('Failed to load jobs page:', e);

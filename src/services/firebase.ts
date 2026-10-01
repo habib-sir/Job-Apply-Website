@@ -23,9 +23,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
+    experimentalAutoDetectLongPolling: true,
   });
 } catch {
   // If already initialized or fallback

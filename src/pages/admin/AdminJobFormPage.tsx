@@ -21,6 +21,7 @@ import { JobPostsTableSection } from '../../components/admin/JobPostsTableSectio
 import { DrivePickerButton } from '../../components/drive/DrivePickerButton';
 import { generateSlug } from '../../utils/slugify';
 import { useToast } from '../../components/common/Toast';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Save, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 
 export const AdminJobFormPage: React.FC = () => {
@@ -28,6 +29,7 @@ export const AdminJobFormPage: React.FC = () => {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { success, error } = useToast();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -129,7 +131,7 @@ export const AdminJobFormPage: React.FC = () => {
 
       await saveFile({
         id: getFileId.cover(jobId),
-        ownerUid: 'admin',
+        ownerUid: user?.uid || 'admin',
         kind: 'cover',
         mime: 'image/jpeg',
         sizeBytes: compressed.sizeBytes,
@@ -155,52 +157,74 @@ export const AdminJobFormPage: React.FC = () => {
 
     setSaving(true);
     try {
-      const deadlineDate = deadline ? new Date(deadline) : null;
-      const pubDate = status === 'scheduled' && publishedAt ? new Date(publishedAt) : serverTimestamp();
+      const cleanPosts = posts
+        .filter((p) => p && p.name && p.name.trim())
+        .map((p) => {
+          const item: any = {
+            name: p.name.trim(),
+            count: Number(p.count) || 1,
+            district: p.district || 'ALL',
+          };
+          if (p.applicationFee !== undefined && p.applicationFee !== null && !isNaN(p.applicationFee)) {
+            item.applicationFee = Number(p.applicationFee);
+          }
+          if (p.serviceCharge !== undefined && p.serviceCharge !== null && !isNaN(p.serviceCharge)) {
+            item.serviceCharge = Number(p.serviceCharge);
+          }
+          return item;
+        });
 
-      const jobData = {
-        title,
+      const finalPosts = cleanPosts.length > 0 ? cleanPosts : [{ name: title.trim(), count: 1, district: 'ALL' }];
+
+      const deadlineDate = deadline ? new Date(deadline) : null;
+      const pubDate = status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date();
+
+      const jobData: any = {
+        title: title.trim(),
         slug: slug.trim(),
-        category,
-        status,
-        content,
+        category: category || 'govt',
+        status: status || 'published',
+        content: content || '',
         deadline: deadlineDate,
         publishedAt: pubDate,
-        applyLink: applyLink.trim(),
-        applyServiceEnabled,
+        applyLink: (applyLink || '').trim(),
+        applyServiceEnabled: Boolean(applyServiceEnabled),
         applicationFee: Number(applicationFee) || 0,
         serviceCharge: Number(serviceCharge) || 0,
-        hasCover,
-        circularLink: circularLink.trim() || null,
-        posts,
+        hasCover: Boolean(hasCover),
+        circularLink: (circularLink || '').trim() || null,
+        posts: finalPosts,
         photoSpec: { width: 300, height: 300, maxKB: 100 },
         signatureSpec: { width: 300, height: 80, maxKB: 60 },
         updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'jobs', jobId), {
-        ...jobData,
-        createdAt: isEdit ? undefined : serverTimestamp(),
-      }, { merge: true });
+      if (!isEdit) {
+        jobData.createdAt = serverTimestamp();
+      }
+
+      // Fast save with 12s safety timeout so button NEVER freezes
+      await Promise.race([
+        setDoc(doc(db, 'jobs', jobId), jobData, { merge: true }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'সার্ভারে সেভ হতে অতিরিক্ত সময় নিচ্ছে। আপনার ইন্টারনেট কানেকশন বা ফায়ারবেস অথেনটিকেশন চেক করুন।'
+                )
+              ),
+            12000
+          )
+        ),
+      ]);
 
       success(isEdit ? 'সার্কুলার আপডেট সম্পন্ন হয়েছে' : 'নতুন সার্কুলার প্রকাশ করা হয়েছে');
 
-      // Sync to feed/latest transactionally
-      try {
-        await syncJobToFeed(
-          jobId,
-          {
-            ...jobData,
-            deadline: deadlineDate,
-            publishedAt: status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date(),
-          },
-          'upsert'
-        );
-      } catch (feedErr) {
-        console.warn('Feed sync warning:', feedErr);
-      }
-
-      // Clear jobs and feed cache so updates show immediately
+      // Sync feed and invalidate cache asynchronously in the background (NON-BLOCKING)
+      syncJobToFeed(jobId, jobData, 'upsert').catch((feedErr) => {
+        console.warn('Feed sync background notice:', feedErr);
+      });
       invalidateCache('jobs_');
       invalidateCache('feed_');
 

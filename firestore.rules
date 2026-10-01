@@ -9,7 +9,10 @@ service cloud.firestore {
         (request.auth.token.email != null && (
           request.auth.token.email == 'habiblinkage@gmail.com' ||
           request.auth.token.email == 'masterboom2040@gmail.com' ||
-          request.auth.token.email == 'admin@studyonlinebd.com'
+          request.auth.token.email == 'admin@studyonlinebd.com' ||
+          request.auth.token.email.lower() == 'habiblinkage@gmail.com' ||
+          request.auth.token.email.lower() == 'masterboom2040@gmail.com' ||
+          request.auth.token.email.lower() == 'admin@studyonlinebd.com'
         ))
       );
     }
@@ -21,7 +24,10 @@ service cloud.firestore {
         signedIn() && (
           request.auth.token.email == 'habiblinkage@gmail.com' ||
           request.auth.token.email == 'masterboom2040@gmail.com' ||
-          request.auth.token.email == 'admin@studyonlinebd.com'
+          request.auth.token.email == 'admin@studyonlinebd.com' ||
+          request.auth.token.email.lower() == 'habiblinkage@gmail.com' ||
+          request.auth.token.email.lower() == 'masterboom2040@gmail.com' ||
+          request.auth.token.email.lower() == 'admin@studyonlinebd.com'
         )
       );
     }
@@ -39,7 +45,7 @@ service cloud.firestore {
     }
 
     match /jobs/{id} {
-      allow read: if resource.data.status == 'published' || isAdmin();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
