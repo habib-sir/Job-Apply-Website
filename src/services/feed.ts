@@ -63,8 +63,12 @@ export async function getFeedLatest(): Promise<FeedJobSummary[]> {
 
     setCached(CACHE_KEY, seededPosts);
     return seededPosts;
-  } catch (err) {
-    console.error('Failed to get feed:', err);
+  } catch (err: any) {
+    if (err?.message?.includes('client is offline')) {
+      console.warn('Feed notice: Firestore client initializing or offline.');
+    } else {
+      console.warn('Feed notice: Unable to fetch live feed, using empty fallback.', err?.message || err);
+    }
     return [];
   }
 }
@@ -147,8 +151,8 @@ export async function syncJobToFeed(
 
     // Invalidate local in-memory cache
     invalidateCache(CACHE_KEY);
-  } catch (err) {
-    console.error('Failed to sync job to feed:', err);
+  } catch (err: any) {
+    console.warn('Sync job to feed notice:', err?.message || err);
     // Non-fatal if feed sync fails, but invalidate cache
     invalidateCache(CACHE_KEY);
   }
