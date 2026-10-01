@@ -272,15 +272,40 @@ export const ApplyJobPage: React.FC = () => {
             helperText="টেলিটক পেমেন্ট ও এডমিট কার্ডের এসএমএস এই নম্বরে পাঠানো হবে"
           />
 
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between text-xs">
+          {/* Dynamic Total Payable Fee based on selected post */}
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
             <div>
-              <span className="font-bold text-emerald-900 block">মোট প্রদেয় ফি:</span>
-              <span className="text-gray-600">
-                টেলিটক ফি: ৳{job.applicationFee} + সার্ভিস চার্জ: ৳{job.serviceCharge}
+              <span className="font-bold text-emerald-900 block text-sm">মোট প্রদেয় ফি:</span>
+              <span className="text-emerald-800 text-xs">
+                {selectedPostObj ? (
+                  <>
+                    পদ: <strong>{selectedPostObj.name}</strong> (টেলিটক ফি: ৳
+                    {selectedPostObj.applicationFee != null && !isNaN(selectedPostObj.applicationFee)
+                      ? selectedPostObj.applicationFee
+                      : (job.applicationFee || 0)}{' '}
+                    + সার্ভিস চার্জ: ৳
+                    {selectedPostObj.serviceCharge != null && !isNaN(selectedPostObj.serviceCharge)
+                      ? selectedPostObj.serviceCharge
+                      : (job.serviceCharge != null && !isNaN(job.serviceCharge) ? job.serviceCharge : 10)}
+                    )
+                  </>
+                ) : (
+                  <>পদ নির্বাচন করলে সঠিক ফি প্রদর্শিত হবে (সার্ভিস চার্জ: ৳{job.serviceCharge != null ? job.serviceCharge : 10})</>
+                )}
               </span>
             </div>
-            <div className="text-lg font-extrabold text-emerald-800">
-              ৳{(job.applicationFee || 0) + (job.serviceCharge || 0)}
+            <div className="text-xl font-extrabold text-emerald-900">
+              {(() => {
+                const curAppFee =
+                  selectedPostObj?.applicationFee != null && !isNaN(selectedPostObj.applicationFee)
+                    ? selectedPostObj.applicationFee
+                    : (job.applicationFee || 0);
+                const curServiceCharge =
+                  selectedPostObj?.serviceCharge != null && !isNaN(selectedPostObj.serviceCharge)
+                    ? selectedPostObj.serviceCharge
+                    : (job.serviceCharge != null && !isNaN(job.serviceCharge) ? job.serviceCharge : 10);
+                return `৳${curAppFee + curServiceCharge}`;
+              })()}
             </div>
           </div>
 

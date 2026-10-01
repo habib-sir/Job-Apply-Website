@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Briefcase, Lock, Phone, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +6,7 @@ import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { GoogleSignInButton } from '../../components/common/GoogleSignInButton';
 import { useToast } from '../../components/common/Toast';
+import { Spinner } from '../../components/common/Spinner';
 
 export const LoginPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
@@ -13,12 +14,26 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState('');
-  const { loginUser, loginWithGoogle } = useAuth();
+  const { loginUser, loginWithGoogle, user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { success } = useToast();
 
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const from = (location.state as any)?.from?.pathname || (role === 'admin' ? '/admin' : '/dashboard');
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(role === 'admin' ? '/admin' : '/dashboard', { replace: true });
+    }
+  }, [user, role, authLoading, navigate]);
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Spinner size="lg" text="ড্যাশবোর্ডে প্রবেশ করা হচ্ছে..." />
+      </div>
+    );
+  }
 
   const handleGoogleLogin = async () => {
     setLocalError('');

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Briefcase, Menu, X, User, LogIn, ArrowRight } from 'lucide-react';
+import { Briefcase, Menu, X, User, LogIn, ArrowRight, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const PublicLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, role, mobile } = useAuth();
+  const { user, role, mobile, logout } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -42,22 +42,26 @@ export const PublicLayout: React.FC = () => {
             </Link>
 
             {user ? (
-              role === 'admin' ? (
+              <div className="flex items-center gap-3">
                 <Link
-                  to="/admin"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-xs"
-                >
-                  অ্যাডমিন প্যানেল
-                </Link>
-              ) : (
-                <Link
-                  to="/dashboard"
+                  to={role === 'admin' ? '/admin' : '/dashboard'}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-xs"
                 >
                   <User className="w-4 h-4" />
-                  <span>আমার ড্যাশবোর্ড ({mobile || 'ইউজার'})</span>
+                  <span>{role === 'admin' ? 'অ্যাডমিন প্যানেল' : `আমার ড্যাশবোর্ড (${mobile || 'ইউজার'})`}</span>
                 </Link>
-              )
+                <button
+                  onClick={async () => {
+                    await logout();
+                    navigate('/');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-medium border border-rose-200"
+                  title="লগআউট"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>লগআউট</span>
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-3">
                 <Link
@@ -117,13 +121,26 @@ export const PublicLayout: React.FC = () => {
             </Link>
 
             {user ? (
-              <Link
-                to={role === 'admin' ? '/admin' : '/dashboard'}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2.5 text-center bg-emerald-600 text-white rounded-lg text-sm font-medium"
-              >
-                {role === 'admin' ? 'অ্যাডমিন প্যানেল' : 'আমার ড্যাশবোর্ড'}
-              </Link>
+              <div className="space-y-2 pt-1 border-t border-gray-100">
+                <Link
+                  to={role === 'admin' ? '/admin' : '/dashboard'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-2.5 text-center bg-emerald-600 text-white rounded-lg text-sm font-medium"
+                >
+                  {role === 'admin' ? 'অ্যাডমিন প্যানেল' : 'আমার ড্যাশবোর্ড'}
+                </Link>
+                <button
+                  onClick={async () => {
+                    await logout();
+                    setMobileMenuOpen(false);
+                    navigate('/');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 text-rose-600 hover:bg-rose-50 rounded-lg text-sm font-medium border border-rose-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>লগআউট</span>
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
                 <Link

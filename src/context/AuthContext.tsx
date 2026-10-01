@@ -40,30 +40,52 @@ const isOwnerEmail = (emailToCheck?: string | null) => {
   );
 };
 
+const getStoredRole = (): UserRole | null => {
+  try {
+    return (localStorage.getItem('auth_role') as UserRole) || (sessionStorage.getItem('auth_role') as UserRole) || null;
+  } catch {
+    return null;
+  }
+};
+
+const getStoredMobile = (): string | null => {
+  try {
+    return localStorage.getItem('auth_mobile') || sessionStorage.getItem('auth_mobile') || null;
+  } catch {
+    return null;
+  }
+};
+
+const persistRole = (r: UserRole | null) => {
+  try {
+    if (r) {
+      localStorage.setItem('auth_role', r);
+      sessionStorage.setItem('auth_role', r);
+    } else {
+      localStorage.removeItem('auth_role');
+      sessionStorage.removeItem('auth_role');
+    }
+  } catch {}
+};
+
+const persistMobile = (m: string | null) => {
+  try {
+    if (m) {
+      localStorage.setItem('auth_mobile', m);
+      sessionStorage.setItem('auth_mobile', m);
+    } else {
+      localStorage.removeItem('auth_mobile');
+      sessionStorage.removeItem('auth_mobile');
+    }
+  } catch {}
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => auth.currentUser);
-  const [role, setRole] = useState<UserRole | null>(() => {
-    try {
-      return (sessionStorage.getItem('auth_role') as UserRole) || null;
-    } catch {
-      return null;
-    }
-  });
-  const [mobile, setMobile] = useState<string | null>(() => {
-    try {
-      return sessionStorage.getItem('auth_mobile') || null;
-    } catch {
-      return null;
-    }
-  });
-  // Fast hydration: only true if no cached role and auth hasn't initialized
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      return !sessionStorage.getItem('auth_role');
-    } catch {
-      return true;
-    }
-  });
+  const [role, setRole] = useState<UserRole | null>(() => getStoredRole());
+  const [mobile, setMobile] = useState<string | null>(() => getStoredMobile());
+  // IMPORTANT: loading must be TRUE until onAuthStateChanged resolves from Firebase SDK
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const clearError = () => setError(null);
@@ -77,9 +99,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (isOwner) {
             setRole('admin');
             setMobile(null);
-            try {
-              sessionStorage.setItem('auth_role', 'admin');
-            } catch {}
+            persistRole('admin');
+            persistMobile(null);
             setLoading(false);
 
             // Background admin doc touch if needed
@@ -102,9 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (adminDoc.exists()) {
             setRole('admin');
             setMobile(null);
-            try {
-              sessionStorage.setItem('auth_role', 'admin');
-            } catch {}
+            persistRole('admin');
+            persistMobile(null);
           } else {
             // Check if regular user
             const userDocRef = doc(db, 'users', currentUser.uid);
@@ -115,26 +135,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setRole('user');
             setMobile(userMobile);
-            try {
-              sessionStorage.setItem('auth_role', 'user');
-              if (userMobile) sessionStorage.setItem('auth_mobile', userMobile);
-            } catch {}
+            persistRole('user');
+            if (userMobile) persistMobile(userMobile);
           }
         } catch (err) {
           // Handled silently
           setRole('user');
-          try {
-            sessionStorage.setItem('auth_role', 'user');
-          } catch {}
+          persistRole('user');
         }
       } else {
         setUser(null);
         setRole(null);
         setMobile(null);
-        try {
-          sessionStorage.removeItem('auth_role');
-          sessionStorage.removeItem('auth_mobile');
-        } catch {}
+        persistRole(null);
+        persistMobile(null);
       }
       setLoading(false);
     });
@@ -349,10 +363,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setRole(null);
     setMobile(null);
-    try {
-      sessionStorage.removeItem('auth_role');
-      sessionStorage.removeItem('auth_mobile');
-    } catch {}
+    persistRole(null);
+    persistMobile(null);
   };
 
   return (

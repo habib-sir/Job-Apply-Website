@@ -297,7 +297,9 @@ export const JobDetailsPage: React.FC = () => {
               {isExpired
                 ? 'এই সার্কুলারের ডেডলাইন অতিক্রান্ত হয়েছে, ফলে আর আবেদন করা যাবে না।'
                 : job.applyServiceEnabled
-                ? `টেলিটক ফি: ৳${job.applicationFee} + সার্ভিস চার্জ: ৳${job.serviceCharge} (মোট ৳${job.applicationFee + job.serviceCharge})`
+                ? job.posts && job.posts.length > 0
+                  ? `পদভেদে সরকারি ফি + ১০ টাকা সার্ভিস চার্জ (বিস্তারিত উপরের টেবিলে দেখুন)`
+                  : `টেলিটক ফি: ৳${job.applicationFee || 0} + সার্ভিস চার্জ: ৳${job.serviceCharge || 10} (মোট ৳${(job.applicationFee || 0) + (job.serviceCharge || 10)})`
                 : 'বিজ্ঞপ্তিতে দেওয়া অফিশিয়াল লিংক ব্যবহার করে আবেদন করুন।'}
             </p>
           </div>

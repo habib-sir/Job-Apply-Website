@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { Spinner } from '../../components/common/Spinner';
 
 export const AdminLoginPage: React.FC = () => {
   const [email, setEmail] = useState('habiblinkage@gmail.com');
@@ -12,9 +13,23 @@ export const AdminLoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState('');
-  const { loginAdmin, loginWithGoogle } = useAuth();
+  const { loginAdmin, loginWithGoogle, user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { success } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && user && role === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, role, authLoading, navigate]);
+
+  if (authLoading || (user && role === 'admin')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <Spinner size="lg" text="অ্যাডমিন ড্যাশবোর্ডে নিয়ে যাওয়া হচ্ছে..." />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

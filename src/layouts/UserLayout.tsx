@@ -106,10 +106,11 @@ export const UserLayout: React.FC = () => {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-gray-600 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors text-xs font-semibold border border-transparent hover:border-rose-200"
               title="লগআউট"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
+              <span>লগআউট</span>
             </button>
           </div>
         </div>

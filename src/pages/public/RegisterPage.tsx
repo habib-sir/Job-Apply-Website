@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
+import { Spinner } from '../../components/common/Spinner';
 
 export const RegisterPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
@@ -12,9 +13,23 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState('');
-  const { registerUser } = useAuth();
+  const { registerUser, user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { success } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(role === 'admin' ? '/admin' : '/dashboard', { replace: true });
+    }
+  }, [user, role, authLoading, navigate]);
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Spinner size="lg" text="ড্যাশবোর্ডে প্রবেশ করা হচ্ছে..." />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -164,10 +164,19 @@ export const AdminLayout: React.FC = () => {
             >
               পাবলিক ওয়েবসাইট দেখুন ↗
             </Link>
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-medium">
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>সক্রিয় অ্যাডমিন</span>
             </div>
+            {/* Prominent Header Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-lg text-xs font-semibold border border-rose-200 transition-colors shadow-xs"
+              title="অ্যাডমিন লগআউট"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>লগআউট</span>
+            </button>
           </div>
         </header>
 
