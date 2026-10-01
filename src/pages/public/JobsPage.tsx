@@ -20,8 +20,10 @@ import { EmptyState } from '../../components/common/EmptyState';
 const ITEMS_PER_PAGE = 20;
 
 export const JobsPage: React.FC = () => {
-  const [jobs, setJobs] = useState<JobCircular[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<JobCircular[]>(() => {
+    return getCached<JobCircular[]>('jobs_page_1') || [];
+  });
+  const [loading, setLoading] = useState(() => !getCached<JobCircular[]>('jobs_page_1'));
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);

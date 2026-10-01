@@ -3,36 +3,56 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { getCached, setCached } from '../../services/cache';
 import { CandidateProfile, JobApplication } from '../../types';
 import { FileText, Clock, CheckCircle, CreditCard, CheckCheck, ArrowRight, User } from 'lucide-react';
-import { Spinner } from '../../components/common/Spinner';
 
 export const UserDashboardPage: React.FC = () => {
   const { user, mobile } = useAuth();
-  const [profile, setProfile] = useState<CandidateProfile | null>(null);
-  const [counts, setCounts] = useState({
-    waiting: 0,
-    checking: 0,
-    paymentNow: 0,
-    applied: 0,
+  const cacheKeyProfile = user ? `user_profile_${user.uid}` : '';
+  const cacheKeyCounts = user ? `user_counts_${user.uid}` : '';
+
+  const [profile, setProfile] = useState<CandidateProfile | null>(() => {
+    return cacheKeyProfile ? getCached<CandidateProfile>(cacheKeyProfile) : null;
   });
-  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState(() => {
+    return (
+      (cacheKeyCounts ? getCached<any>(cacheKeyCounts) : null) || {
+        waiting: 0,
+        checking: 0,
+        paymentNow: 0,
+        applied: 0,
+      }
+    );
+  });
+  const [loading, setLoading] = useState(() => {
+    return cacheKeyCounts ? !getCached(cacheKeyCounts) : false;
+  });
 
   useEffect(() => {
     if (!user) return;
+    let isMounted = true;
+
     const fetchUserData = async () => {
       try {
         // Fetch CV profile
         const profRef = doc(db, 'profiles', user.uid);
-        const profSnap = await getDoc(profRef);
-        if (profSnap.exists()) {
-          setProfile(profSnap.data() as CandidateProfile);
-        }
+        const profPromise = getDoc(profRef);
 
         // Fetch application counts
         const appRef = collection(db, 'applications');
         const q = query(appRef, where('uid', '==', user.uid));
-        const appSnap = await getDocs(q);
+        const appPromise = getDocs(q);
+
+        const [profSnap, appSnap] = await Promise.all([profPromise, appPromise]);
+
+        if (!isMounted) return;
+
+        if (profSnap.exists()) {
+          const profData = profSnap.data() as CandidateProfile;
+          setProfile(profData);
+          setCached(cacheKeyProfile, profData);
+        }
 
         let w = 0;
         let c = 0;
@@ -47,23 +67,23 @@ export const UserDashboardPage: React.FC = () => {
           else if (app.status === 'applied') a++;
         });
 
-        setCounts({ waiting: w, checking: c, paymentNow: p, applied: a });
-      } catch (err) {
-        // Silently handled
+        const updatedCounts = { waiting: w, checking: c, paymentNow: p, applied: a };
+        setCounts(updatedCounts);
+        setCached(cacheKeyCounts, updatedCounts);
+      } catch (err: any) {
+        console.warn('Notice loading user dashboard:', err?.message || err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-    fetchUserData();
-  }, [user]);
 
-  if (loading) {
-    return (
-      <div className="py-20 flex justify-center">
-        <Spinner size="lg" text="ড্যাশবোর্ড তথ্য লোড হচ্ছে..." />
-      </div>
-    );
-  }
+    fetchUserData();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, cacheKeyProfile, cacheKeyCounts]);
 
   const isProfileComplete =
     profile?.data?.fullName &&

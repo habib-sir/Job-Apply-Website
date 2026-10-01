@@ -7,7 +7,7 @@ import { Button } from '../../components/common/Button';
 import { useToast } from '../../components/common/Toast';
 
 export const AdminLoginPage: React.FC = () => {
-  const [email, setEmail] = useState('masterboom2040@gmail.com');
+  const [email, setEmail] = useState('habiblinkage@gmail.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -109,10 +109,10 @@ export const AdminLoginPage: React.FC = () => {
               </label>
               <button
                 type="button"
-                onClick={() => setEmail('masterboom2040@gmail.com')}
+                onClick={() => setEmail('habiblinkage@gmail.com')}
                 className="text-[10px] text-emerald-400 hover:underline"
               >
-                masterboom2040@gmail.com
+                habiblinkage@gmail.com
               </button>
             </div>
             <div className="relative">
@@ -122,7 +122,7 @@ export const AdminLoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="masterboom2040@gmail.com"
+                placeholder="habiblinkage@gmail.com"
                 className="w-full pl-9 pr-3 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
                 disabled={loading}
               />

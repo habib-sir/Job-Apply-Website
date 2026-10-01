@@ -11,10 +11,14 @@ import { HomeUrgentDeadlines } from '../../components/home/HomeUrgentDeadlines';
 import { ArrowRight, Calendar, Sparkles, Award } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const [jobs, setJobs] = useState<FeedJobSummary[]>([]);
-  const [examNotices, setExamNotices] = useState<ExamNotice[]>([]);
+  const [jobs, setJobs] = useState<FeedJobSummary[]>(() => {
+    return getCached<FeedJobSummary[]>('feed_latest') || [];
+  });
+  const [examNotices, setExamNotices] = useState<ExamNotice[]>(() => {
+    return getCached<ExamNotice[]>('exams_home') || [];
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCached<FeedJobSummary[]>('feed_latest'));
 
   useEffect(() => {
     let isMounted = true;

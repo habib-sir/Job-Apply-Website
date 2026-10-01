@@ -33,62 +33,108 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const isOwnerEmail = (emailToCheck?: string | null) => {
   if (!emailToCheck) return false;
   const em = emailToCheck.toLowerCase().trim();
-  return em === 'masterboom2040@gmail.com' || em === 'admin@studyonlinebd.com';
+  return (
+    em === 'habiblinkage@gmail.com' ||
+    em === 'masterboom2040@gmail.com' ||
+    em === 'admin@studyonlinebd.com'
+  );
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [mobile, setMobile] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(() => auth.currentUser);
+  const [role, setRole] = useState<UserRole | null>(() => {
+    try {
+      return (sessionStorage.getItem('auth_role') as UserRole) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [mobile, setMobile] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('auth_mobile') || null;
+    } catch {
+      return null;
+    }
+  });
+  // Fast hydration: only true if no cached role and auth hasn't initialized
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      return !sessionStorage.getItem('auth_role');
+    } catch {
+      return true;
+    }
+  });
   const [error, setError] = useState<string | null>(null);
 
   const clearError = () => setError(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
       if (currentUser) {
         setUser(currentUser);
         try {
           const isOwner = isOwnerEmail(currentUser.email);
-          const adminDocRef = doc(db, 'admins', currentUser.uid);
-          const adminDoc = await getDoc(adminDocRef);
+          if (isOwner) {
+            setRole('admin');
+            setMobile(null);
+            try {
+              sessionStorage.setItem('auth_role', 'admin');
+            } catch {}
+            setLoading(false);
 
-          if (adminDoc.exists() || isOwner) {
-            if (!adminDoc.exists() && isOwner) {
-              try {
-                await setDoc(adminDocRef, {
+            // Background admin doc touch if needed
+            const adminDocRef = doc(db, 'admins', currentUser.uid);
+            getDoc(adminDocRef).then((snap) => {
+              if (!snap.exists()) {
+                setDoc(adminDocRef, {
                   email: currentUser.email,
                   role: 'admin',
                   createdAt: serverTimestamp(),
-                });
-              } catch (e) {
-                // Ignore
+                }).catch(() => {});
               }
-            }
+            }).catch(() => {});
+            return;
+          }
+
+          const adminDocRef = doc(db, 'admins', currentUser.uid);
+          const adminDoc = await getDoc(adminDocRef);
+
+          if (adminDoc.exists()) {
             setRole('admin');
             setMobile(null);
+            try {
+              sessionStorage.setItem('auth_role', 'admin');
+            } catch {}
           } else {
             // Check if regular user
             const userDocRef = doc(db, 'users', currentUser.uid);
             const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              setRole('user');
-              setMobile(userDoc.data()?.mobile || emailToMobile(currentUser.email || ''));
-            } else {
-              setRole('user');
-              setMobile(emailToMobile(currentUser.email || ''));
-            }
+            const userMobile = userDoc.exists()
+              ? userDoc.data()?.mobile || emailToMobile(currentUser.email || '')
+              : emailToMobile(currentUser.email || '');
+
+            setRole('user');
+            setMobile(userMobile);
+            try {
+              sessionStorage.setItem('auth_role', 'user');
+              if (userMobile) sessionStorage.setItem('auth_mobile', userMobile);
+            } catch {}
           }
         } catch (err) {
           // Handled silently
           setRole('user');
+          try {
+            sessionStorage.setItem('auth_role', 'user');
+          } catch {}
         }
       } else {
         setUser(null);
         setRole(null);
         setMobile(null);
+        try {
+          sessionStorage.removeItem('auth_role');
+          sessionStorage.removeItem('auth_mobile');
+        } catch {}
       }
       setLoading(false);
     });
@@ -152,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('ইমেইল ও পাসওয়ার্ড প্রদান করুন');
     }
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     const isOwner = isOwnerEmail(cleanEmail);
 
     try {
@@ -160,9 +206,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
       } catch (signInErr: any) {
-        // If owner email doesn't exist in Firebase Auth yet, auto-register as admin
-        if (signInErr.code === 'auth/user-not-found' && isOwner) {
-          cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+        // Modern Firebase Auth returns 'auth/invalid-credential' instead of 'user-not-found' due to email enumeration protection
+        if (
+          isOwner &&
+          (signInErr.code === 'auth/user-not-found' ||
+           signInErr.code === 'auth/invalid-credential')
+        ) {
+          try {
+            cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+          } catch (createErr: any) {
+            if (createErr.code === 'auth/email-already-in-use') {
+              throw new Error('পাসওয়ার্ড সঠিক নয়। অনুগ্রহ করে সঠিক পাসওয়ার্ড দিন।');
+            }
+            throw createErr;
+          }
         } else {
           throw signInErr;
         }
@@ -188,6 +245,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       setRole('admin');
+      try {
+        sessionStorage.setItem('auth_role', 'admin');
+      } catch {}
     } catch (err: any) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         throw new Error('ইমেইল বা পাসওয়ার্ড সঠিক নয়');
@@ -266,6 +326,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setRole(null);
     setMobile(null);
+    try {
+      sessionStorage.removeItem('auth_role');
+      sessionStorage.removeItem('auth_mobile');
+    } catch {}
   };
 
   return (

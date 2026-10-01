@@ -9,6 +9,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { getCached, setCached } from '../../services/cache';
 import { JobApplication } from '../../types';
 import {
   Clock,
@@ -21,84 +22,89 @@ import {
   TrendingUp,
   XCircle,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
-import { Spinner } from '../../components/common/Spinner';
 
 export const AdminDashboardPage: React.FC = () => {
-  const [counts, setCounts] = useState({
-    waiting: 0,
-    applyNow: 0,
-    checking: 0,
-    paymentNow: 0,
-    complete: 0,
-    rejected: 0,
-    jobsTotal: 0,
+  const [counts, setCounts] = useState(() => {
+    return (
+      getCached<any>('admin_dashboard_counts') || {
+        waiting: 0,
+        applyNow: 0,
+        checking: 0,
+        paymentNow: 0,
+        complete: 0,
+        rejected: 0,
+        jobsTotal: 0,
+      }
+    );
   });
-  const [urgentApps, setUrgentApps] = useState<JobApplication[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [urgentApps, setUrgentApps] = useState<JobApplication[]>(() => {
+    return getCached<JobApplication[]>('admin_dashboard_urgent') || [];
+  });
+  const [loading, setLoading] = useState(() => !getCached('admin_dashboard_counts'));
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchAdminStats = async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
+    try {
+      // High-efficiency count fetches
+      const [
+        waitingCountSnap,
+        applyNowCountSnap,
+        checkingCountSnap,
+        correctionCountSnap,
+        paymentNowCountSnap,
+        completeCountSnap,
+        rejectedCountSnap,
+        jobsCountSnap,
+      ] = await Promise.all([
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'waiting'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'apply_now'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'checking'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'correction'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'payment_now'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'applied'))),
+        getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'rejected'))),
+        getCountFromServer(collection(db, 'jobs')),
+      ]);
+
+      const updatedCounts = {
+        waiting: waitingCountSnap.data().count,
+        applyNow: applyNowCountSnap.data().count,
+        checking: checkingCountSnap.data().count + correctionCountSnap.data().count,
+        paymentNow: paymentNowCountSnap.data().count,
+        complete: completeCountSnap.data().count,
+        rejected: rejectedCountSnap.data().count,
+        jobsTotal: jobsCountSnap.data().count,
+      };
+
+      setCounts(updatedCounts);
+      setCached('admin_dashboard_counts', updatedCounts);
+
+      // Targeted query for urgent active items (limit 5)
+      const urgentSnap = await getDocs(
+        query(
+          collection(db, 'applications'),
+          where('status', 'in', ['waiting', 'apply_now', 'payment_now']),
+          limit(5)
+        )
+      );
+
+      const list = urgentSnap.docs.map((d) => ({ id: d.id, ...d.data() } as JobApplication));
+      setUrgentApps(list);
+      setCached('admin_dashboard_urgent', list);
+    } catch (e: any) {
+      console.warn('Notice fetching admin counts:', e?.message || e);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAdminStats = async () => {
-      try {
-        // High-efficiency getCountFromServer to conserve Firestore read quota
-        const [
-          waitingCountSnap,
-          applyNowCountSnap,
-          checkingCountSnap,
-          correctionCountSnap,
-          paymentNowCountSnap,
-          completeCountSnap,
-          rejectedCountSnap,
-          jobsCountSnap,
-        ] = await Promise.all([
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'waiting'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'apply_now'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'checking'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'correction'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'payment_now'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'applied'))),
-          getCountFromServer(query(collection(db, 'applications'), where('status', '==', 'rejected'))),
-          getCountFromServer(collection(db, 'jobs')),
-        ]);
-
-        setCounts({
-          waiting: waitingCountSnap.data().count,
-          applyNow: applyNowCountSnap.data().count,
-          checking: checkingCountSnap.data().count + correctionCountSnap.data().count,
-          paymentNow: paymentNowCountSnap.data().count,
-          complete: completeCountSnap.data().count,
-          rejected: rejectedCountSnap.data().count,
-          jobsTotal: jobsCountSnap.data().count,
-        });
-
-        // Small targeted query for urgent active items (limit 5)
-        const urgentSnap = await getDocs(
-          query(
-            collection(db, 'applications'),
-            where('status', 'in', ['waiting', 'apply_now', 'payment_now']),
-            limit(5)
-          )
-        );
-
-        const list = urgentSnap.docs.map((d) => ({ id: d.id, ...d.data() } as JobApplication));
-        setUrgentApps(list);
-      } catch (e) {
-        console.error('Error fetching admin counts:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAdminStats();
   }, []);
-
-  if (loading) {
-    return (
-      <div className="py-20 flex justify-center">
-        <Spinner size="lg" text="অ্যাডমিন পরিসংখ্যান লোড হচ্ছে..." />
-      </div>
-    );
-  }
 
   const statCards = [
     {
@@ -153,34 +159,45 @@ export const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">অ্যাডমিন ড্যাশবোর্ড ওভারভিউ</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">অ্যাডমিন ড্যাশবোর্ড ওভারভিউ</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            সকল আবেদন ও সিস্টেমের সার্বিক পরিসংখ্যান (মোট সার্কুলার: {counts.jobsTotal}টি)
+            সকল আবেদন ও সিস্টেমের সার্বিক পরিসংখ্যান (মোট সার্কুলার: {loading ? '...' : counts.jobsTotal}টি)
           </p>
         </div>
-        <Link
-          to="/admin/jobs/new"
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
-        >
-          + নতুন চাকরির বিজ্ঞপ্তি
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchAdminStats(true)}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
+            title="রিফ্রেশ করুন"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+            <span className="hidden sm:inline">রিফ্রেশ</span>
+          </button>
+          <Link
+            to="/admin/jobs/new"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
+          >
+            + নতুন চাকরির বিজ্ঞপ্তি
+          </Link>
+        </div>
       </div>
 
       {/* Urgent Pending Alert Banner */}
       {urgentApps.length > 0 && (
-        <div className="p-5 bg-rose-50 rounded-2xl border border-rose-200 space-y-3">
-          <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
-            <AlertCircle className="w-5 h-5 text-rose-600" />
+        <div className="p-4 sm:p-5 bg-rose-50 rounded-2xl border border-rose-200 space-y-3">
+          <div className="flex items-center gap-2 text-rose-900 font-bold text-xs sm:text-sm">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 shrink-0" />
             <span>জরুরি সতর্কতা: পেন্ডিং সক্রিয় আবেদন ({urgentApps.length}টি)</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
             {urgentApps.map((u) => (
               <div key={u.id} className="p-3 bg-white rounded-xl border border-rose-200 shadow-2xs text-xs">
                 <span className="font-mono font-bold text-rose-700">{u.id}</span>
                 <span className="block font-semibold text-gray-900 line-clamp-1 mt-0.5">{u.jobTitle}</span>
-                <span className="text-[11px] text-gray-500 block">পদ: {u.postName}</span>
+                <span className="text-[11px] text-gray-500 block truncate">পদ: {u.postName}</span>
                 <span className="text-[10px] font-bold text-amber-600 mt-1 block">
                   স্ট্যাটাস: {u.status}
                 </span>
@@ -191,24 +208,30 @@ export const AdminDashboardPage: React.FC = () => {
       )}
 
       {/* 5-Step Pipeline Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
             <Link
               key={i}
               to={card.to}
-              className="bg-white p-5 rounded-xl border border-gray-200 hover:border-emerald-500 hover:shadow-md transition-all flex items-center justify-between"
+              className="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 hover:border-emerald-500 hover:shadow-md transition-all flex items-center justify-between"
             >
               <div>
                 <span className="text-xs font-semibold text-gray-500">{card.title}</span>
-                <div className="text-2xl font-extrabold text-gray-900 mt-1">{card.count}</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1">
+                  {loading ? (
+                    <div className="h-7 w-12 bg-gray-100 animate-pulse rounded-md mt-1" />
+                  ) : (
+                    card.count
+                  )}
+                </div>
                 <p className="text-[11px] text-gray-400 mt-0.5">{card.sub}</p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl ${card.color} text-white flex items-center justify-center shadow-xs`}
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl ${card.color} text-white flex items-center justify-center shadow-xs shrink-0`}
               >
-                <Icon className="w-6 h-6" />
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </Link>
           );
@@ -216,12 +239,12 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* Workflow instructions banner */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
-        <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 space-y-3">
+        <h3 className="font-semibold text-gray-900 text-xs sm:text-sm flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-emerald-600" />
           <span>আবেদন প্রক্রিয়াকরণের ৫টি নির্ধারিত ধাপ:</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 sm:gap-3 pt-2">
           <div className="p-3 bg-amber-50 rounded-lg text-xs border border-amber-100">
             <span className="font-bold text-amber-800 block mb-1">১. Waiting</span>
             <p className="text-amber-700 text-[11px]">প্রার্থীর bKash/Rocket TrxID যাচাই করে অনুমোদন করুন।</p>
