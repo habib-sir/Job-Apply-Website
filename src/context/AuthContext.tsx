@@ -225,25 +225,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      const adminDocRef = doc(db, 'admins', cred.user.uid);
-      const adminDoc = await getDoc(adminDocRef);
+      // If owner, grant admin role immediately without blocking on Firestore network call
+      if (isOwner) {
+        setRole('admin');
+        try {
+          sessionStorage.setItem('auth_role', 'admin');
+        } catch {}
 
-      if (!adminDoc.exists()) {
-        if (isOwner) {
-          try {
-            await setDoc(adminDocRef, {
+        // Touch admin doc in background without blocking login
+        try {
+          const adminDocRef = doc(db, 'admins', cred.user.uid);
+          setDoc(
+            adminDocRef,
+            {
               email: cred.user.email,
               role: 'admin',
-              createdAt: serverTimestamp(),
-            });
-          } catch (e) {
-            // Silently handled
-          }
-        } else {
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          ).catch((e) => console.warn('Background admin doc sync:', e));
+        } catch (e) {
+          // Ignore
+        }
+        return;
+      }
+
+      // For non-owner admin verification
+      try {
+        const adminDocRef = doc(db, 'admins', cred.user.uid);
+        const adminDoc = await getDoc(adminDocRef);
+
+        if (!adminDoc.exists()) {
           await signOut(auth);
           throw new Error('আপনি অ্যাডমিন নন। প্রবেশাধিকার সংরক্ষিত।');
         }
+      } catch (checkErr: any) {
+        if (checkErr.message?.includes('offline')) {
+          console.warn('Firestore offline notice during admin check');
+        } else {
+          throw checkErr;
+        }
       }
+
       setRole('admin');
       try {
         sessionStorage.setItem('auth_role', 'admin');

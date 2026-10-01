@@ -3,6 +3,8 @@ import { getAuth } from 'firebase/auth';
 import {
   initializeFirestore,
   getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
 } from 'firebase/firestore';
 import defaultAppletConfig from '../../firebase-applet-config.json';
 
@@ -21,11 +23,17 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
   });
 } catch {
-  // If already initialized, get existing
-  firestoreInstance = getFirestore(app);
+  // If already initialized or fallback
+  try {
+    firestoreInstance = getFirestore(app);
+  } catch {
+    firestoreInstance = initializeFirestore(app, {});
+  }
 }
 
 export const db = firestoreInstance;
