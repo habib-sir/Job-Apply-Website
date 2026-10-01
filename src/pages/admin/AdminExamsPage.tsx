@@ -8,6 +8,7 @@ import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/Toast';
+import { invalidateCache } from '../../services/cache';
 import { Award, Plus, Trash2, Calendar, FileText } from 'lucide-react';
 
 export const AdminExamsPage: React.FC = () => {
@@ -51,14 +52,15 @@ export const AdminExamsPage: React.FC = () => {
         createdAt: serverTimestamp(),
       });
       success('পরীক্ষা নোটিশ প্রকাশ হয়েছে');
+      invalidateCache('exams_');
       setTitle('');
       setDate('');
       setContent('');
       setModalOpen(false);
       fetchNotices();
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'exams');
-      error('নোটিশ সংরক্ষণ করতে ব্যর্থ হয়েছে');
+    } catch (err: any) {
+      console.error('Exam save error:', err);
+      error(err?.message || 'নোটিশ সংরক্ষণ করতে ব্যর্থ হয়েছে');
     } finally {
       setSaving(false);
     }
@@ -68,11 +70,12 @@ export const AdminExamsPage: React.FC = () => {
     if (!window.confirm('আপনি কি নিশ্চিত যে নোটিশটি মুছতে চান?')) return;
     try {
       await deleteDoc(doc(db, 'exams', id));
+      invalidateCache('exams_');
       setNotices(notices.filter((n) => n.id !== id));
       success('নোটিশ মুছে ফেলা হয়েছে');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `exams/${id}`);
-      error('মুছতে ব্যর্থ হয়েছে');
+    } catch (err: any) {
+      console.error('Exam delete error:', err);
+      error(err?.message || 'মুছতে ব্যর্থ হয়েছে');
     }
   };
 

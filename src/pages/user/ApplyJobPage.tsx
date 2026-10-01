@@ -141,7 +141,17 @@ export const ApplyJobPage: React.FC = () => {
       }
 
       const appId = await generateApplicationId();
-      const totalFee = (job.applicationFee || 0) + (job.serviceCharge || 0);
+      const appFee =
+        selectedPostObj?.applicationFee != null && !isNaN(selectedPostObj.applicationFee) && selectedPostObj.applicationFee > 0
+          ? selectedPostObj.applicationFee
+          : (job.applicationFee || 0);
+
+      const sCharge =
+        selectedPostObj?.serviceCharge != null && !isNaN(selectedPostObj.serviceCharge) && selectedPostObj.serviceCharge > 0
+          ? selectedPostObj.serviceCharge
+          : (job.serviceCharge || 0);
+
+      const totalFee = appFee + sCharge;
 
       navigate(`/apply/${job.id}/payment`, {
         state: {
@@ -155,8 +165,8 @@ export const ApplyJobPage: React.FC = () => {
           smsNumber,
           fullName: profile?.data?.fullName || '',
           fee: {
-            applicationFee: job.applicationFee || 0,
-            serviceCharge: job.serviceCharge || 0,
+            applicationFee: appFee,
+            serviceCharge: sCharge,
             total: totalFee,
           },
         },
@@ -221,6 +231,21 @@ export const ApplyJobPage: React.FC = () => {
             <p className="text-[11px] text-gray-500 mt-1">
               আপনার স্থায়ী জেলা: <strong>{candidateDistrict}</strong>। শুধুমাত্র অনুমোদিত পদেই আবেদন করতে পারবেন।
             </p>
+
+            {selectedPostObj && (
+              <div className="mt-2.5 p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl text-xs space-y-1">
+                <div className="font-bold text-emerald-900 flex items-center justify-between">
+                  <span>নির্বাচিত পদের ফি বিবরণী:</span>
+                  <span className="text-sm font-extrabold text-emerald-800">
+                    মোট: ৳{(selectedPostObj.applicationFee ?? job.applicationFee) + (selectedPostObj.serviceCharge ?? job.serviceCharge)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-emerald-700 text-[11px] pt-0.5">
+                  <span>টেলিটক/সরকারি ফি: <strong>৳{selectedPostObj.applicationFee ?? job.applicationFee}</strong></span>
+                  <span>সার্ভিস চার্জ: <strong>৳{selectedPostObj.serviceCharge ?? job.serviceCharge}</strong></span>
+                </div>
+              </div>
+            )}
           </div>
 
           <Select

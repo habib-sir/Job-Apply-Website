@@ -14,6 +14,7 @@ import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { PaymentHeaderReference } from '../../components/payment/PaymentHeaderReference';
 import { useToast } from '../../components/common/Toast';
+import { invalidateCache } from '../../services/cache';
 import { isValidMobile } from '../../utils/auth';
 import { Copy, Check, AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -172,6 +173,8 @@ export const ApplicationPaymentPage: React.FC = () => {
         createdAt: serverTimestamp(),
       });
 
+      invalidateCache('user_');
+      invalidateCache('admin_');
       success('আপনার আবেদন যাচাইয়ের অপেক্ষায় আছে!');
       navigate('/applications/waiting', { replace: true });
     } catch (err: any) {

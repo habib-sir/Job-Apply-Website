@@ -10,6 +10,7 @@ import {
   FILE_LIMITS,
 } from '../../services/files';
 import { syncJobToFeed } from '../../services/feed';
+import { invalidateCache } from '../../services/cache';
 import { JobCircular, JobCategory, JobStatus, JobPostItem } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
@@ -177,29 +178,36 @@ export const AdminJobFormPage: React.FC = () => {
         updatedAt: serverTimestamp(),
       };
 
-      if (isEdit) {
-        await updateDoc(doc(db, 'jobs', jobId), jobData);
-        success('সার্কুলার আপডেট সম্পন্ন হয়েছে');
-      } else {
-        await setDoc(doc(db, 'jobs', jobId), { ...jobData, createdAt: serverTimestamp() });
-        success('নতুন সার্কুলার প্রকাশ করা হয়েছে');
-      }
+      await setDoc(doc(db, 'jobs', jobId), {
+        ...jobData,
+        createdAt: isEdit ? undefined : serverTimestamp(),
+      }, { merge: true });
+
+      success(isEdit ? 'সার্কুলার আপডেট সম্পন্ন হয়েছে' : 'নতুন সার্কুলার প্রকাশ করা হয়েছে');
 
       // Sync to feed/latest transactionally
-      await syncJobToFeed(
-        jobId,
-        {
-          ...jobData,
-          deadline: deadlineDate,
-          publishedAt: status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date(),
-        },
-        'upsert'
-      );
+      try {
+        await syncJobToFeed(
+          jobId,
+          {
+            ...jobData,
+            deadline: deadlineDate,
+            publishedAt: status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date(),
+          },
+          'upsert'
+        );
+      } catch (feedErr) {
+        console.warn('Feed sync warning:', feedErr);
+      }
+
+      // Clear jobs and feed cache so updates show immediately
+      invalidateCache('jobs_');
+      invalidateCache('feed_');
 
       navigate('/admin/jobs');
     } catch (err: any) {
-      handleFirestoreError(err, isEdit ? OperationType.UPDATE : OperationType.CREATE, `jobs/${jobId}`);
-      error('সার্কুলার সেভ করতে ব্যর্থ হয়েছে');
+      console.error('Job save error:', err);
+      error(err?.message || 'সার্কুলার সেভ করতে ব্যর্থ হয়েছে');
     } finally {
       setSaving(false);
     }

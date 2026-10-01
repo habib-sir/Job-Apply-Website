@@ -7,6 +7,7 @@ service cloud.firestore {
       return signedIn() && (
         exists(/databases/$(db)/documents/admins/$(request.auth.uid)) ||
         (request.auth.token.email != null && (
+          request.auth.token.email == 'habiblinkage@gmail.com' ||
           request.auth.token.email == 'masterboom2040@gmail.com' ||
           request.auth.token.email == 'admin@studyonlinebd.com'
         ))
@@ -18,6 +19,7 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
       allow write: if isAdmin() || (
         signedIn() && (
+          request.auth.token.email == 'habiblinkage@gmail.com' ||
           request.auth.token.email == 'masterboom2040@gmail.com' ||
           request.auth.token.email == 'admin@studyonlinebd.com'
         )

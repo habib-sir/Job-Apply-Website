@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../services/firebase';
 import { PaymentSettings } from '../../types';
+import { invalidateCache } from '../../services/cache';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
@@ -46,18 +47,23 @@ export const AdminPaymentSettingsPage: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'payment'), {
-        bkashNumber: bkashNumber.trim(),
-        rocketNumber: rocketNumber.trim(),
-        nagadNumber: nagadNumber.trim(),
-        whatsappNumber: whatsappNumber.trim(),
-        instructions: instructions.trim(),
-        updatedAt: serverTimestamp(),
-      });
-      success('পেমেন্ট ও যোগাযোগ সেটিংস সংরক্ষিত হয়েছে!');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'settings/payment');
-      error('সেটিংস সংরক্ষণ ব্যর্থ হয়েছে');
+      await setDoc(
+        doc(db, 'settings', 'payment'),
+        {
+          bkashNumber: bkashNumber.trim(),
+          rocketNumber: rocketNumber.trim(),
+          nagadNumber: nagadNumber.trim(),
+          whatsappNumber: whatsappNumber.trim(),
+          instructions: instructions.trim(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      invalidateCache('settings_');
+      success('পেমেন্ট ও যোগাযোগ সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
+    } catch (err: any) {
+      console.error('Settings save error:', err);
+      error(err?.message || 'সেটিংস সংরক্ষণ ব্যর্থ হয়েছে');
     } finally {
       setSaving(false);
     }

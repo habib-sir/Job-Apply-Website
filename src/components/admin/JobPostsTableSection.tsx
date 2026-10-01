@@ -37,50 +37,95 @@ export const JobPostsTableSection: React.FC<Props> = ({
         {posts.map((post, idx) => (
           <div
             key={idx}
-            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-gray-50 rounded-lg"
+            className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-3"
           >
-            <div className="flex-1 sm:flex-2">
-              <Input
-                placeholder="পদের নাম (যেমন: সহকারী স্টেশন মাস্টার)"
-                value={post.name}
-                onChange={(e) => onUpdatePost(idx, 'name', e.target.value)}
-                className="w-full"
-                requiredStar
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex-1 sm:flex-2">
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  পদের নাম <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  placeholder="যেমন: সহকারী স্টেশন মাস্টার"
+                  value={post.name}
+                  onChange={(e) => onUpdatePost(idx, 'name', e.target.value)}
+                  className="w-full"
+                  requiredStar
+                />
+              </div>
+              <div className="w-full sm:w-28">
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  পদসংখ্যা
+                </label>
+                <Input
+                  placeholder="সংখ্যা"
+                  type="number"
+                  value={post.count}
+                  onChange={(e) => onUpdatePost(idx, 'count', Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="w-full sm:flex-1">
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  জেলা যোগ্যতা
+                </label>
+                <select
+                  value={post.district}
+                  onChange={(e) => onUpdatePost(idx, 'district', e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="ALL">সারাদেশ (ALL Districts)</option>
+                  {BD_DISTRICTS.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {posts.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onRemovePost(idx)}
+                  className="self-end sm:self-center mt-auto sm:mt-5 p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                  title="মুছে ফেলুন"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <div className="w-full sm:w-28">
-              <Input
-                placeholder="পদসংখ্যা"
-                type="number"
-                value={post.count}
-                onChange={(e) => onUpdatePost(idx, 'count', Number(e.target.value))}
-                className="w-full"
-              />
+
+            {/* Per-post fee configuration */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-gray-200/60">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
+                  এই পদের টেলিটক/সরকারি ফি (৳) <span className="text-gray-400 font-normal">(খালি রাখলে ডিফল্ট ফি প্রযোজ্য)</span>
+                </label>
+                <Input
+                  type="number"
+                  placeholder="যেমন: ৬৬৭ বা ২২৩"
+                  value={post.applicationFee !== undefined ? post.applicationFee : ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                    onUpdatePost(idx, 'applicationFee', val);
+                  }}
+                  className="w-full text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
+                  এই পদের সার্ভিস চার্জ (৳) <span className="text-gray-400 font-normal">(খালি রাখলে ডিফল্ট চার্জ প্রযোজ্য)</span>
+                </label>
+                <Input
+                  type="number"
+                  placeholder="যেমন: ৫০"
+                  value={post.serviceCharge !== undefined ? post.serviceCharge : ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                    onUpdatePost(idx, 'serviceCharge', val);
+                  }}
+                  className="w-full text-xs"
+                />
+              </div>
             </div>
-            <div className="w-full sm:flex-1">
-              <select
-                value={post.district}
-                onChange={(e) => onUpdatePost(idx, 'district', e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="ALL">সারাদেশ (ALL Districts)</option>
-                {BD_DISTRICTS.map((d) => (
-                  <option key={d.name} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {posts.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onRemovePost(idx)}
-                className="self-end sm:self-center p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
-                title="মুছে ফেলুন"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
           </div>
         ))}
       </div>

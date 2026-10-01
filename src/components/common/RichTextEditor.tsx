@@ -11,8 +11,10 @@ import {
   Image as ImageIcon,
   Eye,
   Edit3,
+  Sparkles,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { formatJobContent } from '../../utils/formatJobContent';
 
 interface Props {
   value: string;
@@ -25,6 +27,13 @@ export const RichTextEditor: React.FC<Props> = ({ value, onChange, label }) => {
 
   const insertSnippet = (snippet: string) => {
     onChange((value || '') + snippet);
+  };
+
+  const handleAutoFormat = () => {
+    if (!value) return;
+    const formatted = formatJobContent(value);
+    onChange(formatted);
+    setTab('preview');
   };
 
   const handleInsertTable = () => {
@@ -172,20 +181,32 @@ export const RichTextEditor: React.FC<Props> = ({ value, onChange, label }) => {
               >
                 <LinkIcon className="w-4 h-4" />
               </button>
+
+              <button
+                type="button"
+                onClick={handleAutoFormat}
+                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold shadow-xs ml-auto transition-colors"
+                title="স্বয়ংক্রিয়ভাবে প্যারাগ্রাফ, বুলেট পয়েন্ট ও হেডিং ফরম্যাট করুন"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                <span>✨ অটো ফরম্যাট</span>
+              </button>
             </div>
 
             <textarea
               rows={12}
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder="চাকরির বিস্তারিত বিবরণ, পদের শর্তাবলী, আবেদনের নিয়ম ও অন্যান্য তথ্য এখানে লিখুন বা ফরম্যাট করুন..."
+              placeholder="এখানে যেকোনো সাধারণ টেক্সট পেস্ট করে '✨ অটো ফরম্যাট' বাটনে চাপ দিন, সিস্টেম নিজে নিজে সুন্দর প্যারাগ্রাফ ও বুলেট পয়েন্টে সাজিয়ে দেবে..."
               className="w-full p-4 text-sm font-sans focus:outline-none resize-y"
             />
           </div>
         ) : (
           <div
             className="p-5 prose prose-sm max-w-none min-h-[300px] overflow-y-auto"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value || '<p className="text-gray-400">কোনো কনটেন্ট লেখা হয়নি</p>') }}
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(formatJobContent(value || '<p class="text-gray-400">কোনো কনটেন্ট লেখা হয়নি</p>'))
+            }}
           />
         )}
       </div>

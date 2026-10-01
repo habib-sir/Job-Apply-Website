@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useAuth } from '../../context/AuthContext';
+import { formatJobContent } from '../../utils/formatJobContent';
 
 export const JobDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -221,18 +222,31 @@ export const JobDetailsPage: React.FC = () => {
                     <th className="p-2.5">পদের নাম</th>
                     <th className="p-2.5">পদসংখ্যা</th>
                     <th className="p-2.5">আবেদনের অনুমোদিত জেলা</th>
+                    <th className="p-2.5 text-right">আবেদন ফি (টাকা)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {job.posts.map((p, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2.5 font-bold text-gray-800">{p.name}</td>
-                      <td className="p-2.5 text-gray-600">{p.count} জন</td>
-                      <td className="p-2.5 text-emerald-700 font-medium">
-                        {p.district === 'ALL' ? 'সারাদেশ (সকল জেলা)' : p.district}
-                      </td>
-                    </tr>
-                  ))}
+                  {job.posts.map((p, idx) => {
+                    const postAppFee = p.applicationFee ?? job.applicationFee;
+                    const postServiceCharge = p.serviceCharge ?? job.serviceCharge;
+                    const postTotal = postAppFee + postServiceCharge;
+
+                    return (
+                      <tr key={idx}>
+                        <td className="p-2.5 font-bold text-gray-800">{p.name}</td>
+                        <td className="p-2.5 text-gray-600">{p.count} জন</td>
+                        <td className="p-2.5 text-emerald-700 font-medium">
+                          {p.district === 'ALL' ? 'সারাদেশ (সকল জেলা)' : p.district}
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-gray-900">
+                          ৳{postTotal}
+                          <span className="text-[10px] text-gray-400 font-normal block">
+                            (ফি: ৳{postAppFee} + চার্জ: ৳{postServiceCharge})
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -246,7 +260,7 @@ export const JobDetailsPage: React.FC = () => {
           </h3>
           <div
             className="prose prose-sm max-w-none text-gray-800 leading-relaxed space-y-4"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.content || '') }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatJobContent(job.content || '')) }}
           />
         </div>
 

@@ -15,6 +15,7 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Spinner } from '../../components/common/Spinner';
 import { useToast } from '../../components/common/Toast';
+import { invalidateCache } from '../../services/cache';
 import { calculateCVCompleteness, generateDegreeString } from '../../utils/cvValidation';
 import { Save, AlertTriangle, ShieldCheck } from 'lucide-react';
 
@@ -210,11 +211,12 @@ export const UserCVPage: React.FC = () => {
         updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'profiles', user.uid), profilePayload);
+      await setDoc(doc(db, 'profiles', user.uid), profilePayload, { merge: true });
+      invalidateCache('user_');
       success('সিভি সফলভাবে সংরক্ষিত হয়েছে!');
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, `profiles/${user.uid}`);
-      error('সিভি সংরক্ষণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      console.error('CV save error:', err);
+      error(err?.message || 'সিভি সংরক্ষণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     } finally {
       setSaving(false);
     }

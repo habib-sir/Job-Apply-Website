@@ -5,6 +5,8 @@ export interface JobPostItem {
   name: string;
   count: number;
   district: 'ALL' | string;
+  applicationFee?: number;
+  serviceCharge?: number;
 }
 
 export interface MediaSpec {
