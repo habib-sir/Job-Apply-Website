@@ -125,9 +125,19 @@ export const AdminLayout: React.FC = () => {
           ))}
         </div>
 
-        {/* Sidebar Footer with Logout */}
-        <div className="p-3 border-t border-gray-800">
-          <div className="px-3 py-2 mb-2 text-xs text-gray-400 truncate">
+        {/* Sidebar Footer with Extension Download & Logout */}
+        <div className="p-3 border-t border-gray-800 space-y-2">
+          <a
+            href="/bd-job-autofill-extension.zip"
+            download="bd-job-autofill-extension.zip"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white rounded-lg text-xs font-semibold border border-emerald-600/50 transition-colors shadow-xs"
+            title="টেলিটক অটোফিল ক্রোম এক্সটেনশন ডাউনলোড (.zip)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Autofill Extension (.zip)</span>
+          </a>
+
+          <div className="px-3 py-1 text-xs text-gray-400 truncate">
             {user?.email || 'Admin'}
           </div>
           <button
@@ -156,18 +166,32 @@ export const AdminLayout: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/"
               target="_blank"
-              className="text-xs text-emerald-700 hover:underline font-medium hidden sm:inline"
+              className="text-xs text-emerald-700 hover:underline font-medium hidden md:inline"
             >
               পাবলিক ওয়েবসাইট দেখুন ↗
             </Link>
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-medium">
+
+            {/* Direct Autofill Extension Download Button in Admin Header */}
+            <a
+              href="/bd-job-autofill-extension.zip"
+              download="bd-job-autofill-extension.zip"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              title="টেলিটক অটোফিল ক্রোম এক্সটেনশন ডাউনলোড (.zip)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Autofill Extension (.zip)</span>
+              <span className="sm:hidden">Extension</span>
+            </a>
+
+            <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>সক্রিয় অ্যাডমিন</span>
             </div>
+
             {/* Prominent Header Logout Button */}
             <button
               onClick={handleLogout}

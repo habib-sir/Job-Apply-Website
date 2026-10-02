@@ -112,6 +112,37 @@ export const ApplicationCardItem: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* Official Teletalk Apply Link Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-emerald-50/70 border border-emerald-200/80 rounded-lg text-xs">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-bold text-emerald-900 shrink-0">অফিসিয়াল Teletalk আবেদন লিংক:</span>
+          {app.applyLink ? (
+            <a
+              href={app.applyLink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-700 hover:text-emerald-900 hover:underline font-mono truncate max-w-xs sm:max-w-md md:max-w-lg"
+              title={app.applyLink}
+            >
+              {app.applyLink}
+            </a>
+          ) : (
+            <span className="text-amber-700 italic">বিজ্ঞপ্তিতে লিংক যুক্ত নেই</span>
+          )}
+        </div>
+        {app.applyLink && (
+          <a
+            href={app.applyLink}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded transition-colors shadow-xs"
+          >
+            <span>পোর্টাল খুলুন</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
+
       {/* Payment screenshot button */}
       {hasScreenshot && (
         <div className="text-xs pt-1">
@@ -151,12 +182,16 @@ export const ApplicationCardItem: React.FC<Props> = ({
 
         {app.status === 'apply_now' && (
           <>
-            {app.applyLink && (
+            {app.applyLink ? (
               <a href={app.applyLink} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="outline" icon={<ExternalLink className="w-3.5 h-3.5" />}>
-                  Teletalk লিংক
+                <Button size="sm" variant="outline" className="border-emerald-500 text-emerald-700 hover:bg-emerald-50" icon={<ExternalLink className="w-3.5 h-3.5" />}>
+                  Teletalk লিংক খুলুন ↗
                 </Button>
               </a>
+            ) : (
+              <Button size="sm" variant="outline" disabled title="বিজ্ঞপ্তিতে টেলিটক লিংক নেই">
+                Teletalk লিংক নেই
+              </Button>
             )}
             <Button size="sm" variant="secondary" onClick={() => onOpenAutofill(app)} icon={<Send className="w-3.5 h-3.5" />}>
               Autofill-এ পাঠান

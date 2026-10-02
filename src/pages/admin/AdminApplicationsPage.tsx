@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   collection,
@@ -25,6 +25,7 @@ import {
   CompletePaidModal,
   AutofillModal,
 } from '../../components/admin/ApplicationActionModals';
+import { Download } from 'lucide-react';
 
 export const AdminApplicationsPage: React.FC = () => {
   const { step } = useParams<{ step: string }>();
@@ -40,6 +41,41 @@ export const AdminApplicationsPage: React.FC = () => {
   const [softCopyModalOpen, setSoftCopyModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [autofillModalOpen, setAutofillModalOpen] = useState(false);
+
+  // In-memory cache for job applyLinks to avoid repeated reads
+  const jobLinksRef = useRef<Record<string, string>>({});
+
+  const enrichApplications = async (list: JobApplication[]): Promise<JobApplication[]> => {
+    const missingJobIds = Array.from(
+      new Set(list.filter((a) => !a.applyLink && a.jobId).map((a) => a.jobId))
+    );
+
+    if (missingJobIds.length > 0) {
+      await Promise.all(
+        missingJobIds.map(async (jId) => {
+          if (jobLinksRef.current[jId] !== undefined) return;
+          try {
+            const jSnap = await getDoc(doc(db, 'jobs', jId));
+            if (jSnap.exists()) {
+              const jData = jSnap.data();
+              jobLinksRef.current[jId] = jData.applyLink || '';
+            } else {
+              jobLinksRef.current[jId] = '';
+            }
+          } catch {
+            jobLinksRef.current[jId] = '';
+          }
+        })
+      );
+    }
+
+    return list.map((a) => {
+      if (!a.applyLink && a.jobId && jobLinksRef.current[a.jobId]) {
+        return { ...a, applyLink: jobLinksRef.current[a.jobId] };
+      }
+      return a;
+    });
+  };
 
   const stepStatusMap: Record<string, ApplicationStatus[]> = {
     waiting: ['waiting'],
@@ -74,8 +110,10 @@ export const AdminApplicationsPage: React.FC = () => {
               const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
               return tB - tA;
             });
-          setApps(list);
-          setLoading(false);
+          enrichApplications(list).then((enriched) => {
+            setApps(enriched);
+            setLoading(false);
+          });
         },
         (err) => {
           console.error('Snapshot error:', err);
@@ -100,7 +138,8 @@ export const AdminApplicationsPage: React.FC = () => {
               const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
               return tB - tA;
             });
-          setApps(list);
+          const enriched = await enrichApplications(list);
+          setApps(enriched);
         } catch (err) {
           error('আবেদন তালিকা লোড করতে ব্যর্থ হয়েছে');
         } finally {
@@ -240,6 +279,18 @@ export const AdminApplicationsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-gray-900">{pageTitles[currentStep] || 'আবেদন তালিকা'}</h2>
           <p className="text-xs text-gray-500 mt-0.5">মোট আবেদন সংখ্যা: {apps.length}টি</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/bd-job-autofill-extension.zip"
+            download="bd-job-autofill-extension.zip"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold border border-emerald-200 transition-colors shadow-xs"
+            title="ব্রাউজারে এক্সটেনশন ইনস্টল করতে ডাউনলোড করুন"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Autofill Extension ডাউনলোড (.zip)</span>
+          </a>
         </div>
       </div>
 

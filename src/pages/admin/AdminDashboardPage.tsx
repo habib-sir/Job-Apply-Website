@@ -23,6 +23,9 @@ import {
   XCircle,
   Calendar,
   RefreshCw,
+  Download,
+  HelpCircle,
+  Check,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -44,6 +47,7 @@ export const AdminDashboardPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(() => !getCached('admin_dashboard_counts'));
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const fetchAdminStats = async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
@@ -166,7 +170,16 @@ export const AdminDashboardPage: React.FC = () => {
             সকল আবেদন ও সিস্টেমের সার্বিক পরিসংখ্যান (মোট সার্কুলার: {loading ? '...' : counts.jobsTotal}টি)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/bd-job-autofill-extension.zip"
+            download="bd-job-autofill-extension.zip"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            title="টেলিটক অটোফিল ক্রোম এক্সটেনশন ডাউনলোড (.zip)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Autofill Extension ডাউনলোড (.zip)</span>
+          </a>
           <button
             onClick={() => fetchAdminStats(true)}
             disabled={isRefreshing}
@@ -178,11 +191,94 @@ export const AdminDashboardPage: React.FC = () => {
           </button>
           <Link
             to="/admin/jobs/new"
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
+            className="px-3.5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs font-semibold shadow-xs"
           >
             + নতুন চাকরির বিজ্ঞপ্তি
           </Link>
         </div>
+      </div>
+
+      {/* BD Job Autofill Chrome Extension Feature Banner */}
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-gray-900 text-white rounded-2xl p-5 md:p-6 shadow-sm border border-emerald-700/60 space-y-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 rounded text-[11px] font-bold uppercase tracking-wider">
+                Chrome Extension v1.2.0
+              </span>
+              <span className="text-xs text-emerald-200/90 font-medium">টেলিটক অটোফিল টুল</span>
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-white">
+              Teletalk-এ ১-ক্লিকে প্রার্থীর আবেদন ও ছবি-স্বাক্ষর পূরণের জন্য Autofill Extension
+            </h3>
+            <p className="text-xs text-emerald-100/80 leading-relaxed">
+              অ্যাডমিন প্যানেলে Apply Now সেকশন থেকে <strong>"Autofill-এ পাঠান ও Teletalk পোর্টাল খুলুন"</strong> দিলে প্রার্থীর সকল তথ্য, ছবি (৩০০×৩০০) ও স্বাক্ষর (৩০০×৮০) সরাসরি এই এক্সটেনশনটি দিয়ে টেলিটক পোর্টালে এক ক্লিকে স্বয়ংক্রিয়ভাবে পূরণ হয়ে যায়।
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 w-full md:w-auto">
+            <a
+              href="/bd-job-autofill-extension.zip"
+              download="bd-job-autofill-extension.zip"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-gray-950 font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              <span>Autofill Extension ডাউনলোড (.zip)</span>
+            </a>
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold border border-white/20 transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>{showGuide ? 'গাইড বন্ধ করুন' : 'ইনস্টলেশন গাইড'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Installation Guide */}
+        {showGuide && (
+          <div className="pt-4 border-t border-emerald-800/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs animate-fadeIn">
+            <div className="bg-emerald-950/70 p-3.5 rounded-xl border border-emerald-800/50 space-y-1">
+              <span className="w-5 h-5 rounded-full bg-emerald-500 text-gray-950 font-bold flex items-center justify-center text-[11px] mb-1">
+                ১
+              </span>
+              <strong className="text-white block font-bold">ফাইল ডাউনলোড ও আনজিপ</strong>
+              <p className="text-emerald-200/80 text-[11px]">
+                উপরের বাটন দিয়ে <strong>bd-job-autofill-extension.zip</strong> ডাউনলোড করে কম্পিউটারে আনজিপ (Extract) করুন।
+              </p>
+            </div>
+
+            <div className="bg-emerald-950/70 p-3.5 rounded-xl border border-emerald-800/50 space-y-1">
+              <span className="w-5 h-5 rounded-full bg-emerald-500 text-gray-950 font-bold flex items-center justify-center text-[11px] mb-1">
+                ২
+              </span>
+              <strong className="text-white block font-bold">ক্রোম এক্সটেনশনে যান</strong>
+              <p className="text-emerald-200/80 text-[11px]">
+                Google Chrome ব্রাউজারের অ্যাড্রেসবারে <code className="bg-black/40 px-1 py-0.5 rounded text-emerald-300">chrome://extensions</code> লিখে এন্টার চাপুন।
+              </p>
+            </div>
+
+            <div className="bg-emerald-950/70 p-3.5 rounded-xl border border-emerald-800/50 space-y-1">
+              <span className="w-5 h-5 rounded-full bg-emerald-500 text-gray-950 font-bold flex items-center justify-center text-[11px] mb-1">
+                ৩
+              </span>
+              <strong className="text-white block font-bold">Developer mode অন করুন</strong>
+              <p className="text-emerald-200/80 text-[11px]">
+                ডানপাশের উপরের কোণে <strong>Developer mode</strong> টগলটি অন করুন।
+              </p>
+            </div>
+
+            <div className="bg-emerald-950/70 p-3.5 rounded-xl border border-emerald-800/50 space-y-1">
+              <span className="w-5 h-5 rounded-full bg-emerald-500 text-gray-950 font-bold flex items-center justify-center text-[11px] mb-1">
+                ৪
+              </span>
+              <strong className="text-white block font-bold">Load unpacked সিলেক্ট করুন</strong>
+              <p className="text-emerald-200/80 text-[11px]">
+                বামপাশের উপরের <strong>"Load unpacked"</strong> বাটনে ক্লিক করে আনজিপ করা <code className="bg-black/40 px-1 py-0.5 rounded text-emerald-300">extension</code> ফোল্ডারটি দেখিয়ে দিন।
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Urgent Pending Alert Banner */}

@@ -143,6 +143,7 @@ export const ApplicationPaymentPage: React.FC = () => {
           fullName: state.fullName,
           jobId: state.jobId,
           jobTitle: state.jobTitle,
+          applyLink: state.applyLink || '',
           postName: state.postName,
           postCount: state.postCount,
           district: state.district,

@@ -158,6 +158,7 @@ export const ApplyJobPage: React.FC = () => {
           appId,
           jobId: job.id,
           jobTitle: job.title,
+          applyLink: job.applyLink || '',
           postName: selectedPostName,
           postCount: selectedPostObj?.count || 1,
           district: candidateDistrict,

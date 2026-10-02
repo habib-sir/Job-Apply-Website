@@ -23,6 +23,8 @@ import {
   Upload,
   FileText,
   Image as ImageIcon,
+  ExternalLink,
+  Download,
 } from 'lucide-react';
 import { DrivePickerButton } from '../drive/DrivePickerButton';
 
@@ -478,14 +480,36 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
     loadFiles();
   }, [isOpen, app, profile]);
 
+  const [extensionAck, setExtensionAck] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleAck = (event: MessageEvent) => {
+      if (event.data?.type === 'CAREER_PORTAL_AUTOFILL_ACK') {
+        setExtensionAck(event.data.profileName || 'প্রার্থী');
+        setPosted(true);
+      }
+    };
+    window.addEventListener('message', handleAck);
+    return () => window.removeEventListener('message', handleAck);
+  }, []);
+
   if (!app || !profile) return null;
 
   const autofillPayload = {
+    ...profile.data,
+    id: `applicant_${app.id}`,
     appId: app.id,
+    jobId: app.jobId,
+    jobTitle: app.jobTitle,
     postName: app.postName,
+    district: app.district,
+    applyLink: app.applyLink || '',
     educationLevel: app.educationLevel,
     smsNumber: app.smsNumber,
-    ...profile.data,
+    mobile: app.smsNumber || app.mobile,
+    mobileConfirm: app.smsNumber || app.mobile,
+    fullName: profile.data?.fullName || app.fullName,
+    name: profile.data?.fullName || app.fullName,
     photoDataUrl: photoData || undefined,
     signatureDataUrl: sigData || undefined,
   };
@@ -496,33 +520,81 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendPostMessage = () => {
+  const handleSendAutofill = (openPortal = false) => {
+    // 1. window.postMessage for Chrome extension content script
     window.postMessage(
       {
-        type: 'TELE_AUTOFILL_DATA',
+        type: 'CAREER_PORTAL_AUTOFILL',
         source: 'CAREER_PORTAL_ADMIN',
         payload: autofillPayload,
       },
       '*'
     );
+
+    // 2. CustomEvent for content script
+    document.dispatchEvent(
+      new CustomEvent('CAREER_PORTAL_AUTOFILL', {
+        detail: autofillPayload,
+      })
+    );
+
+    // 3. Fallback localStorage
+    try {
+      localStorage.setItem('CAREER_PORTAL_AUTOFILL_ACTIVE', JSON.stringify({
+        timestamp: Date.now(),
+        payload: autofillPayload,
+      }));
+    } catch {}
+
     setPosted(true);
-    setTimeout(() => setPosted(false), 2500);
+
+    if (openPortal && app.applyLink) {
+      window.open(app.applyLink, '_blank');
+    }
+
+    setTimeout(() => setPosted(false), 3500);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`অটোফিল ডাটা: ${app.fullName} (${app.id})`}>
       <div className="space-y-4">
-        <p className="text-xs text-gray-600">
-          টেলিটক পোর্টালে ফর্ম পূরণের জন্য প্রার্থীর সকল ক্যানোনিকাল ডাটা নিচে প্রস্তুত রয়েছে। এক্সটেনশনে পাঠাতে "Autofill-এ পাঠান" চাপুন অথবা JSON কপি করুন:
-        </p>
+        {/* Official Teletalk Portal link banner */}
+        {app.applyLink ? (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+            <div className="min-w-0">
+              <span className="font-bold text-emerald-900 block mb-0.5">অফিসিয়াল Teletalk আবেদন লিংক:</span>
+              <a
+                href={app.applyLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-700 hover:text-emerald-900 underline font-mono truncate block"
+              >
+                {app.applyLink}
+              </a>
+            </div>
+            <a
+              href={app.applyLink}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-xs"
+            >
+              <span>পোর্টাল খুলুন</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        ) : (
+          <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs">
+            ⚠️ এই সার্কুলারে টেলিটক আবেদন লিংক যুক্ত নেই। সার্কুলার সম্পাদনায় গিয়ে লিংক যুক্ত করতে পারেন।
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
-          <div><span className="text-gray-400">নাম:</span> <strong>{profile.data?.fullName}</strong></div>
-          <div><span className="text-gray-400">বাংলায়:</span> <strong>{profile.data?.nameBn}</strong></div>
+          <div><span className="text-gray-400">নাম:</span> <strong>{profile.data?.fullName || app.fullName}</strong></div>
+          <div><span className="text-gray-400">পদ:</span> <strong>{app.postName}</strong></div>
           <div><span className="text-gray-400">পিতা:</span> <strong>{profile.data?.fatherName}</strong></div>
           <div><span className="text-gray-400">মাতা:</span> <strong>{profile.data?.motherName}</strong></div>
           <div><span className="text-gray-400">মোবাইল:</span> <strong>{app.smsNumber}</strong></div>
-          <div><span className="text-gray-400">NID:</span> <strong>{profile.data?.nidNo}</strong></div>
+          <div><span className="text-gray-400">NID:</span> <strong>{profile.data?.nidNo || 'নেই'}</strong></div>
           <div><span className="text-gray-400">জেলা:</span> <strong>{profile.data?.permanentDistrict}</strong></div>
           <div><span className="text-gray-400">উপজেলা:</span> <strong>{profile.data?.permanentUpazila}</strong></div>
         </div>
@@ -530,7 +602,7 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
         {/* Loaded Photo & Signature preview using getFile */}
         <div className="p-3 bg-white rounded-lg border border-gray-200 flex items-center justify-around gap-4">
           <div className="text-center">
-            <span className="text-[10px] text-gray-500 block mb-1">প্রার্থীর ছবি (getFile)</span>
+            <span className="text-[10px] text-gray-500 block mb-1">প্রার্থীর ছবি (৩০০×৩০০)</span>
             {loadingMedia ? (
               <Spinner size="sm" />
             ) : photoData ? (
@@ -541,7 +613,7 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
           </div>
 
           <div className="text-center">
-            <span className="text-[10px] text-gray-500 block mb-1">স্বাক্ষর (getFile)</span>
+            <span className="text-[10px] text-gray-500 block mb-1">স্বাক্ষর (৩০০×৮০)</span>
             {loadingMedia ? (
               <Spinner size="sm" />
             ) : sigData ? (
@@ -552,14 +624,35 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
           </div>
         </div>
 
+        {extensionAck && (
+          <div className="p-2.5 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-lg text-xs font-semibold flex items-center gap-1.5 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>এক্সটেনশনে [{extensionAck}] এর তথ্য সফলভাবে সক্রিয় হয়েছে! Teletalk পেজে গিয়ে এক ক্লিকে পূরণ করতে পারবেন।</span>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
-          <Button
-            size="sm"
-            onClick={handleSendPostMessage}
-            icon={posted ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-          >
-            {posted ? 'Autofill-এ পাঠানো হয়েছে ✓' : 'Autofill-এ পাঠান (postMessage)'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {app.applyLink ? (
+              <Button
+                size="sm"
+                onClick={() => handleSendAutofill(true)}
+                icon={<ExternalLink className="w-3.5 h-3.5" />}
+                className="bg-emerald-700 hover:bg-emerald-800"
+              >
+                Autofill-এ পাঠান ও লিংক খুলুন ↗
+              </Button>
+            ) : null}
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleSendAutofill(false)}
+              icon={posted ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+            >
+              {posted ? 'Autofill-এ পাঠানো হয়েছে ✓' : 'Autofill-এ পাঠান'}
+            </Button>
+          </div>
 
           <Button
             size="sm"
@@ -569,6 +662,19 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
           >
             {copied ? 'কপি হয়েছে' : 'JSON কপি'}
           </Button>
+        </div>
+
+        {/* Extension Download notice */}
+        <div className="pt-2 text-center border-t border-gray-100 text-[11px] text-gray-500 flex items-center justify-center gap-2">
+          <span>ক্রোম এক্সটেনশন প্রয়োজন?</span>
+          <a
+            href="/bd-job-autofill-extension.zip"
+            download="bd-job-autofill-extension.zip"
+            className="text-emerald-700 hover:underline font-semibold inline-flex items-center gap-1"
+          >
+            <Download className="w-3 h-3" />
+            <span>Autofill Extension (.zip) ডাউনলোড করুন</span>
+          </a>
         </div>
       </div>
     </Modal>
