@@ -936,6 +936,10 @@ function fillForm(profileData) {
     }
   }
 
+  // Handle Teletalk special field structures (split DOB, radios, same-as-present, media)
+  handleTeletalkSpecialFields(profileData);
+  injectMediaFiles(profileData);
+
   // Select elements (Upazila/P.S., Result Type, etc.) are frequently populated
   // asynchronously — either on a timer or in response to another field's
   // 'change' event (e.g. choosing a Board/Exam loads that board's grading
@@ -1051,6 +1055,174 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return false;
 });
+
+/**
+ * Handles Teletalk-specific complex field patterns such as split DOB dropdowns,
+ * Yes/No verification radio buttons (NID, Birth Reg, Passport), and Same-as-present checkbox.
+ * @param {object} profileData
+ */
+function handleTeletalkSpecialFields(profileData) {
+  if (!profileData) return;
+
+  // 1. Date of Birth split dropdowns (Day, Month, Year)
+  if (profileData.dateOfBirth) {
+    let day = '', month = '', year = '';
+    const dobStr = String(profileData.dateOfBirth).trim();
+    if (dobStr.includes('-')) {
+      const parts = dobStr.split('-');
+      if (parts[0].length === 4) {
+        year = parts[0];
+        month = parts[1];
+        day = parts[2];
+      } else {
+        day = parts[0];
+        month = parts[1];
+        year = parts[2];
+      }
+    } else if (dobStr.includes('/')) {
+      const parts = dobStr.split('/');
+      if (parts[2] && parts[2].length === 4) {
+        day = parts[0];
+        month = parts[1];
+        year = parts[2];
+      }
+    }
+
+    if (day && month && year) {
+      const monthNames = [
+        'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december'
+      ];
+      const mIdx = parseInt(month, 10) - 1;
+      const mName = monthNames[mIdx] || '';
+      const dayNum = String(parseInt(day, 10));
+      const dayPad = day.padStart(2, '0');
+      const monthNum = String(parseInt(month, 10));
+      const monthPad = month.padStart(2, '0');
+
+      // Day select
+      const daySelects = document.querySelectorAll('select[name*="day" i], select[id*="day" i], select[name*="b_day" i]');
+      for (const sel of daySelects) {
+        for (const opt of sel.options) {
+          const val = opt.value.trim();
+          const txt = opt.text.trim();
+          if (val === dayNum || val === dayPad || txt === dayNum || txt === dayPad) {
+            sel.value = opt.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+      }
+
+      // Month select
+      const monthSelects = document.querySelectorAll('select[name*="month" i], select[id*="month" i], select[name*="b_month" i]');
+      for (const sel of monthSelects) {
+        for (const opt of sel.options) {
+          const val = opt.value.trim().toLowerCase();
+          const txt = opt.text.trim().toLowerCase();
+          if (
+            val === monthNum || val === monthPad || txt === monthNum || txt === monthPad ||
+            (mName && (val.includes(mName) || txt.includes(mName) || txt.startsWith(mName.slice(0, 3))))
+          ) {
+            sel.value = opt.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+      }
+
+      // Year select
+      const yearSelects = document.querySelectorAll('select[name*="year" i], select[id*="year" i], select[name*="b_year" i]');
+      for (const sel of yearSelects) {
+        for (const opt of sel.options) {
+          const val = opt.value.trim();
+          const txt = opt.text.trim();
+          if (val === year || txt === year) {
+            sel.value = opt.value;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. NID Yes/No Radios
+  const nidRadios = document.querySelectorAll('input[type="radio"][name*="nid" i]:not([name*="no" i])');
+  if (nidRadios.length > 0) {
+    const hasNid = Boolean(profileData.nidNo && profileData.nidNo.length >= 10);
+    for (const r of nidRadios) {
+      const val = (r.value || '').toLowerCase();
+      const desc = describeElement(r);
+      const isYes = val === 'yes' || val === '1' || val === 'y' || desc.includes('yes');
+      const isNo = val === 'no' || val === '2' || val === 'n' || desc.includes('no');
+      if (hasNid && isYes) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+        r.dispatchEvent(new Event('click', { bubbles: true }));
+      } else if (!hasNid && isNo) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
+  // 3. Birth Registration Yes/No Radios
+  const bregRadios = document.querySelectorAll('input[type="radio"][name*="breg" i]:not([name*="no" i]), input[type="radio"][name*="birth" i]');
+  if (bregRadios.length > 0) {
+    const hasBreg = Boolean(profileData.birthRegNo);
+    for (const r of bregRadios) {
+      const val = (r.value || '').toLowerCase();
+      const desc = describeElement(r);
+      const isYes = val === 'yes' || val === '1' || val === 'y' || desc.includes('yes');
+      const isNo = val === 'no' || val === '2' || val === 'n' || desc.includes('no');
+      if (hasBreg && isYes) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+        r.dispatchEvent(new Event('click', { bubbles: true }));
+      } else if (!hasBreg && isNo) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
+  // 4. Passport Yes/No Radios
+  const passRadios = document.querySelectorAll('input[type="radio"][name*="passport" i]:not([name*="no" i])');
+  if (passRadios.length > 0) {
+    const hasPass = Boolean(profileData.passportNo);
+    for (const r of passRadios) {
+      const val = (r.value || '').toLowerCase();
+      const desc = describeElement(r);
+      const isYes = val === 'yes' || val === '1' || val === 'y' || desc.includes('yes');
+      const isNo = val === 'no' || val === '2' || val === 'n' || desc.includes('no');
+      if (hasPass && isYes) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+        r.dispatchEvent(new Event('click', { bubbles: true }));
+      } else if (!hasPass && isNo) {
+        r.checked = true;
+        r.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
+  // 5. Same As Present Checkbox
+  const sameCheckbox = document.querySelector('input[type="checkbox"][name*="same" i], input[type="checkbox"][id*="same" i]');
+  if (sameCheckbox) {
+    const isSame =
+      profileData.sameAsPresent === true ||
+      (profileData.presentDistrict &&
+        profileData.permanentDistrict &&
+        profileData.presentDistrict.toLowerCase() === profileData.permanentDistrict.toLowerCase() &&
+        profileData.presentAddress === profileData.permanentAddress);
+    if (isSame && !sameCheckbox.checked) {
+      sameCheckbox.checked = true;
+      sameCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      sameCheckbox.dispatchEvent(new Event('click', { bubbles: true }));
+    }
+  }
+}
 
 /**
  * Injects photo and signature files into Teletalk file inputs if dataURLs are provided.
@@ -1196,32 +1368,83 @@ function checkAndInjectTeletalkToolbar() {
     const profile = response && response.ok ? response.data : null;
     if (!profile) return;
 
-    if (document.getElementById('bd-autofill-teletalk-bar')) return;
+    // Check if session expired
+    if (profile.expiresAt && Date.now() > profile.expiresAt) {
+      return;
+    }
+
+    // Auto-detect and auto-inject photo/signature if file inputs exist on this page
+    const fileInputsFound = document.querySelectorAll(
+      'input[type="file"][name*="photo" i], input[type="file"][name*="picture" i], input[type="file"][name*="sig" i]'
+    );
+    const hasMediaInputs = fileInputsFound.length > 0;
+    if (hasMediaInputs && (profile.photoDataUrl || profile.signatureDataUrl)) {
+      setTimeout(() => {
+        injectMediaFiles(profile);
+      }, 300);
+    }
+
+    if (document.getElementById('bd-autofill-teletalk-bar')) {
+      // Update existing bar if applicant changed
+      const nameElem = document.getElementById('bd-autofill-applicant-name');
+      if (nameElem) nameElem.textContent = profile.fullName || profile.name || 'সক্রিয় প্রার্থী';
+      return;
+    }
 
     const bar = document.createElement('div');
     bar.id = 'bd-autofill-teletalk-bar';
     bar.style.cssText =
-      'position: sticky; top: 0; left: 0; width: 100%; z-index: 999999; background: #064e3b; color: #fff; padding: 10px 16px; font-family: sans-serif; font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-bottom: 2px solid #10b981;';
+      'position: sticky; top: 0; left: 0; width: 100%; z-index: 9999999; background: linear-gradient(90deg, #064e3b, #065f46); color: #fff; padding: 8px 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.25); border-bottom: 2px solid #10b981; box-sizing: border-box;';
+
+    // Calculate remaining session minutes
+    let timeText = '';
+    if (profile.expiresAt) {
+      const remainingMs = profile.expiresAt - Date.now();
+      const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
+      timeText = `⏳ সেশন: ${remainingMin} মিনিট`;
+    }
 
     const leftInfo = document.createElement('div');
     leftInfo.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;';
     leftInfo.innerHTML = `
-      <span style="background: #10b981; color: #064e3b; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">BD Job Autofill</span>
-      <span>প্রার্থী: <strong>${profile.fullName || profile.name || 'সক্রিয় প্রার্থী'}</strong></span>
-      ${profile.postName ? `<span style="color: #6ee7b7;">[পদ: ${profile.postName}]</span>` : ''}
+      <span style="background: #10b981; color: #064e3b; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">⚡ BD JOB AUTOFILL</span>
+      <span>প্রার্থী: <strong id="bd-autofill-applicant-name">${profile.fullName || profile.name || 'সক্রিয় প্রার্থী'}</strong></span>
+      ${profile.appId ? `<span style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px; font-size: 11px;">#ID: ${profile.appId}</span>` : ''}
+      ${profile.postName ? `<span style="color: #a7f3d0; font-weight: 500;">[পদ: ${profile.postName}]</span>` : ''}
+      ${timeText ? `<span style="color: #fde68a; font-size: 11px;">${timeText}</span>` : ''}
     `;
 
     const rightActions = document.createElement('div');
-    rightActions.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    rightActions.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-wrap: wrap;';
 
+    // Main autofill button
     const btnAutofill = document.createElement('button');
     btnAutofill.type = 'button';
     btnAutofill.style.cssText =
-      'background: #10b981; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);';
-    btnAutofill.innerHTML = '⚡ এক ক্লিকে পূরণ করুন';
+      'background: #10b981; hover:background: #059669; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.15s ease;';
+    btnAutofill.innerHTML = '⚡ এক ক্লিকে ফর্ম পূরণ করুন';
+
+    // Dedicated Photo & Signature button
+    const btnMedia = document.createElement('button');
+    btnMedia.type = 'button';
+    btnMedia.style.cssText =
+      'background: #0284c7; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);';
+    btnMedia.innerHTML = '📷 ছবি ও স্বাক্ষর দিন';
+    if (!profile.photoDataUrl && !profile.signatureDataUrl) {
+      btnMedia.style.opacity = '0.5';
+      btnMedia.title = 'প্রার্থীর ছবি বা স্বাক্ষর নেই';
+    }
+
+    // Dismiss / Close session button
+    const btnClose = document.createElement('button');
+    btnClose.type = 'button';
+    btnClose.style.cssText =
+      'background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;';
+    btnClose.title = 'ফ্লোটিং বার লুকান';
+    btnClose.innerHTML = '✕';
 
     const statusSpan = document.createElement('span');
-    statusSpan.style.cssText = 'font-size: 12px; color: #a7f3d0;';
+    statusSpan.style.cssText = 'font-size: 12px; color: #6ee7b7; font-weight: 500;';
 
     btnAutofill.onclick = () => {
       try {
@@ -1234,8 +1457,24 @@ function checkAndInjectTeletalkToolbar() {
       }
     };
 
+    btnMedia.onclick = () => {
+      try {
+        injectMediaFiles(profile);
+        statusSpan.innerText = '✓ ৩০০×৩০০ ছবি এবং ৩০০×৮০ স্বাক্ষর সফলভাবে সংযুক্ত করা হয়েছে!';
+        btnMedia.style.background = '#0369a1';
+      } catch (err) {
+        statusSpan.innerText = `ইরর: ${err.message}`;
+      }
+    };
+
+    btnClose.onclick = () => {
+      bar.remove();
+    };
+
     rightActions.appendChild(btnAutofill);
+    rightActions.appendChild(btnMedia);
     rightActions.appendChild(statusSpan);
+    rightActions.appendChild(btnClose);
 
     bar.appendChild(leftInfo);
     bar.appendChild(rightActions);

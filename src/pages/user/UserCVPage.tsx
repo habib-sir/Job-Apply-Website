@@ -193,11 +193,13 @@ export const UserCVPage: React.FC = () => {
         masResult: formData.masResult || '',
         masYear: formData.masYear || '',
         masDuration: formData.masDuration || '',
-        bachelor: bachelorString,
-        master: masterString,
+        bachelor: Boolean(formData.graExam || formData.graInstitute) ? 'Yes' : (formData.bachelor || ''),
+        master: Boolean(formData.masExam || formData.masInstitute) ? 'Yes' : (formData.master || ''),
         experienceComputer: formData.experienceComputer || 'No',
         experienceSatlipi: formData.experienceSatlipi || 'No',
         customFields: formData.customFields || [],
+        photoDataUrl: photoUrl || undefined,
+        signatureDataUrl: signatureUrl || undefined,
       };
 
       const profilePayload: CandidateProfile = {
@@ -208,6 +210,8 @@ export const UserCVPage: React.FC = () => {
         mobile: finalData.mobile,
         hasPhoto: Boolean(hasPhoto || photoUrl),
         hasSignature: Boolean(hasSignature || signatureUrl),
+        photoUrl: photoUrl || '',
+        signatureUrl: signatureUrl || '',
         updatedAt: serverTimestamp(),
       };
 

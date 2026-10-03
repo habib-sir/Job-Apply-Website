@@ -456,6 +456,7 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [posted, setPosted] = useState(false);
+  const [sessionMinutes, setSessionMinutes] = useState<number>(60);
   const [photoData, setPhotoData] = useState<string>('');
   const [sigData, setSigData] = useState<string>('');
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -467,10 +468,22 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
       setLoadingMedia(true);
       try {
         const photoDoc = await getFile(getFileId.photo(app.uid));
-        if (photoDoc?.data) setPhotoData(photoDoc.data);
+        if (photoDoc?.data) {
+          setPhotoData(photoDoc.data);
+        } else if (profile.photoUrl) {
+          setPhotoData(profile.photoUrl);
+        } else if (profile.data?.photoDataUrl) {
+          setPhotoData(profile.data.photoDataUrl);
+        }
 
         const sigDoc = await getFile(getFileId.signature(app.uid));
-        if (sigDoc?.data) setSigData(sigDoc.data);
+        if (sigDoc?.data) {
+          setSigData(sigDoc.data);
+        } else if (profile.signatureUrl) {
+          setSigData(profile.signatureUrl);
+        } else if (profile.data?.signatureDataUrl) {
+          setSigData(profile.data.signatureDataUrl);
+        }
       } catch (e) {
         // Fallback
       } finally {
@@ -497,8 +510,9 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
 
   const autofillPayload = {
     ...profile.data,
-    id: `applicant_${app.id}`,
+    id: app.id,
     appId: app.id,
+    uid: app.uid,
     jobId: app.jobId,
     jobTitle: app.jobTitle,
     postName: app.postName,
@@ -512,6 +526,7 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
     name: profile.data?.fullName || app.fullName,
     photoDataUrl: photoData || undefined,
     signatureDataUrl: sigData || undefined,
+    sessionMinutes: sessionMinutes,
   };
 
   const handleCopyJSON = () => {
@@ -624,10 +639,33 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
           </div>
         </div>
 
+        {/* Session duration & Temporary Session Info */}
+        <div className="p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/40 border border-emerald-200 rounded-xl space-y-2 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+              <span>⏱️ এক্সটেনশনে ডাটা মনে রাখার সময়সীমা:</span>
+            </span>
+            <select
+              value={sessionMinutes}
+              onChange={(e) => setSessionMinutes(Number(e.target.value))}
+              className="bg-white border border-emerald-300 rounded-lg px-2.5 py-1 text-xs text-emerald-900 font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-xs"
+            >
+              <option value={30}>৩০ মিনিট (অস্থায়ী সেশন)</option>
+              <option value={60}>১ ঘণ্টা (স্ট্যান্ডার্ড)</option>
+              <option value={120}>২ ঘণ্টা</option>
+              <option value={360}>৬ ঘণ্টা</option>
+              <option value={1440}>১ দিন</option>
+            </select>
+          </div>
+          <p className="text-[11px] text-emerald-700 leading-relaxed">
+            💡 <strong>কোনো প্রোফাইল সেভ হবে না:</strong> প্রার্থীর তথ্য এক্সটেনশনের অস্থায়ী সেশনে সংরক্ষিত থাকবে। টেলিটক পোর্টালে গিয়ে উপরে ফ্লোটিং বারে <strong>"এক ক্লিকে ফর্ম পূরণ করুন"</strong> চাপলেই সব পূরণ হবে এবং ছবির পেজে ছবি-স্বাক্ষর নিজে থেকেই অ্যাটাচ হয়ে যাবে!
+          </p>
+        </div>
+
         {extensionAck && (
           <div className="p-2.5 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-lg text-xs font-semibold flex items-center gap-1.5 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>এক্সটেনশনে [{extensionAck}] এর তথ্য সফলভাবে সক্রিয় হয়েছে! Teletalk পেজে গিয়ে এক ক্লিকে পূরণ করতে পারবেন।</span>
+            <span>এক্সটেনশনে [{extensionAck}] এর তথ্য সফলভাবে সক্রিয় হয়েছে! Teletalk পেজে গিয়ে ফ্লোটিং বার থেকে এক ক্লিকে পূরণ করতে পারবেন।</span>
           </div>
         )}
 
@@ -638,9 +676,9 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
                 size="sm"
                 onClick={() => handleSendAutofill(true)}
                 icon={<ExternalLink className="w-3.5 h-3.5" />}
-                className="bg-emerald-700 hover:bg-emerald-800"
+                className="bg-emerald-700 hover:bg-emerald-800 shadow-xs"
               >
-                Autofill-এ পাঠান ও লিংক খুলুন ↗
+                Autofill-এ পাঠান ও Teletalk খুলুন ↗
               </Button>
             ) : null}
 
@@ -650,19 +688,28 @@ export const AutofillModal: React.FC<AutofillModalProps> = ({
               onClick={() => handleSendAutofill(false)}
               icon={posted ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
             >
-              {posted ? 'Autofill-এ পাঠানো হয়েছে ✓' : 'Autofill-এ পাঠান'}
+              {posted ? 'অস্থায়ী সেশনে সক্রিয় ✓' : 'Autofill-এ পাঠান'}
             </Button>
           </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCopyJSON}
-            icon={copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          >
-            {copied ? 'কপি হয়েছে' : 'JSON কপি'}
-          </Button>
         </div>
+
+        {/* Optional JSON details for Admin */}
+        <details className="pt-1 text-xs text-gray-500 border-t border-gray-100">
+          <summary className="cursor-pointer hover:text-gray-700 font-medium py-1">
+            Advanced / অপশনাল: JSON ডাটা দেখুন ও কপি করুন
+          </summary>
+          <div className="mt-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between gap-2">
+            <span className="text-[11px] text-gray-600">প্রয়োজনে ম্যানুয়াল টেস্ট বা ডিবাগিংয়ের জন্য JSON কপি করতে পারেন।</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyJSON}
+              icon={copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            >
+              {copied ? 'কপি হয়েছে' : 'JSON কপি'}
+            </Button>
+          </div>
+        </details>
 
         {/* Extension Download notice */}
         <div className="pt-2 text-center border-t border-gray-100 text-[11px] text-gray-500 flex items-center justify-center gap-2">

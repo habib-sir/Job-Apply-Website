@@ -79,6 +79,8 @@ export interface ProfileData {
   experienceComputer?: string;
   experienceSatlipi?: string;
   customFields?: CustomField[];
+  photoDataUrl?: string;
+  signatureDataUrl?: string;
 }
 
 export interface CandidateProfile {

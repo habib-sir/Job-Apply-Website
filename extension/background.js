@@ -12,7 +12,8 @@
 const STORAGE_KEYS = {
   PROFILES: 'profiles',
   APPLICATIONS: 'applications',
-  ACTIVE_PROFILE_ID: 'activeProfileId'
+  ACTIVE_PROFILE_ID: 'activeProfileId',
+  ACTIVE_SESSION_APPLICANT: 'activeSessionApplicant'
 };
 
 /**
@@ -117,13 +118,49 @@ async function handleSetActiveProfile(profileId) {
  * Handles GET_ACTIVE_PROFILE message.
  * @returns {Promise<object|null>}
  */
+/**
+ * Handles GET_ACTIVE_PROFILE message.
+ * Priority: Unexpired temporary active session applicant > saved active profile.
+ * @returns {Promise<object|null>}
+ */
 async function handleGetActiveProfile() {
+  const sessionData = await storageGet(STORAGE_KEYS.ACTIVE_SESSION_APPLICANT);
+  if (sessionData && sessionData.expiresAt) {
+    if (Date.now() < sessionData.expiresAt) {
+      return sessionData;
+    } else {
+      // Session has expired; clean it up
+      await storageSet(STORAGE_KEYS.ACTIVE_SESSION_APPLICANT, null);
+      try {
+        if (chrome.action) {
+          await chrome.action.setBadgeText({ text: '' });
+        }
+      } catch (e) {}
+    }
+  }
+
   const activeId = await storageGet(STORAGE_KEYS.ACTIVE_PROFILE_ID);
   if (!activeId) {
     return null;
   }
   const profiles = await handleGetProfiles();
   return profiles.find((p) => p.id === activeId) || null;
+}
+
+/**
+ * Handles CLEAR_ACTIVE_SESSION message.
+ * Removes temporary candidate session and clears badge.
+ * @returns {Promise<boolean>}
+ */
+async function handleClearActiveSession() {
+  await storageSet(STORAGE_KEYS.ACTIVE_SESSION_APPLICANT, null);
+  await storageSet('LAST_PORTAL_APPLICANT', null);
+  try {
+    if (chrome.action) {
+      await chrome.action.setBadgeText({ text: '' });
+    }
+  } catch (e) {}
+  return true;
 }
 
 /**
@@ -172,7 +209,7 @@ async function handleDeleteApplication(applicationId) {
 
 /**
  * Handles IMPORT_AND_ACTIVATE_PROFILE from Career Portal Admin.
- * Inserts or updates profile, activates it, and notifies.
+ * Stores candidate in temporary memory/session without permanently saving into profiles list.
  * @param {object} payload
  * @returns {Promise<object>}
  */
@@ -181,20 +218,26 @@ async function handleImportAndActivateProfile(payload) {
     throw new Error('Invalid payload: missing data.');
   }
 
-  const profileId = payload.id || `applicant_${payload.appId || Date.now()}`;
+  const profileId = payload.appId || payload.id || `applicant_${Date.now()}`;
   const profileName = payload.fullName || payload.name || 'Applicant Profile';
+  const sessionMinutes = Number(payload.sessionMinutes) || 60; // default 60 min
+  const now = Date.now();
 
-  const profile = {
+  const sessionApplicant = {
     ...payload,
     id: profileId,
+    appId: payload.appId || payload.id,
     name: profileName,
     fullName: profileName,
-    updatedAt: new Date().toISOString(),
     source: 'CareerPortalAdmin',
+    isTemporarySession: true,
+    sessionMinutes: sessionMinutes,
+    receivedAt: now,
+    expiresAt: now + sessionMinutes * 60 * 1000,
   };
 
-  await handleSaveProfile(profile);
-  await handleSetActiveProfile(profileId);
+  // Save ONLY in temporary active session storage (DOES NOT pollute profiles array!)
+  await storageSet(STORAGE_KEYS.ACTIVE_SESSION_APPLICANT, sessionApplicant);
 
   // Store last portal applicant info
   await storageSet('LAST_PORTAL_APPLICANT', {
@@ -203,10 +246,11 @@ async function handleImportAndActivateProfile(payload) {
     jobTitle: payload.jobTitle,
     postName: payload.postName,
     applyLink: payload.applyLink,
-    timestamp: Date.now(),
+    timestamp: now,
+    expiresAt: sessionApplicant.expiresAt,
   });
 
-  // Badge notification
+  // Badge notification on extension icon
   try {
     if (chrome.action) {
       await chrome.action.setBadgeText({ text: '✓' });
@@ -214,7 +258,7 @@ async function handleImportAndActivateProfile(payload) {
     }
   } catch (e) {}
 
-  return profile;
+  return sessionApplicant;
 }
 
 const MESSAGE_HANDLERS = {
@@ -226,7 +270,9 @@ const MESSAGE_HANDLERS = {
   GET_APPLICATIONS: () => handleGetApplications(),
   SAVE_APPLICATION: (payload) => handleSaveApplication(payload),
   DELETE_APPLICATION: (payload) => handleDeleteApplication(payload),
-  IMPORT_AND_ACTIVATE_PROFILE: (payload) => handleImportAndActivateProfile(payload)
+  IMPORT_AND_ACTIVATE_PROFILE: (payload) => handleImportAndActivateProfile(payload),
+  SET_ACTIVE_SESSION_APPLICANT: (payload) => handleImportAndActivateProfile(payload),
+  CLEAR_ACTIVE_SESSION: () => handleClearActiveSession()
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
