@@ -105,5 +105,24 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isAdmin();
     }
+
+    match /otps/{mobile} {
+      allow read: if true;
+      allow create, update: if mobile.matches('^01[3-9][0-9]{8}$')
+        && request.resource.data.mobile == mobile
+        && request.resource.data.code.size() <= 4;
+      allow delete: if true;
+    }
+
+    match /smsQueue/{jobId} {
+      allow read: if true;
+      allow create: if request.resource.data.recipient.matches('^01[3-9][0-9]{8}$')
+        && request.resource.data.body.size() >= 10
+        && request.resource.data.body.size() <= 160
+        && request.resource.data.status == 'pending'
+        && request.resource.data.type in ['otp', 'system'];
+      allow update: if request.resource.data.status in ['pending', 'sent', 'failed'];
+      allow delete: if isAdmin();
+    }
   }
 }

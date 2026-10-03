@@ -183,9 +183,42 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["posts"]
+    },
+    "Otp": {
+      "title": "Otp",
+      "description": "Registration OTP verification code",
+      "type": "object",
+      "properties": {
+        "mobile": { "type": "string" },
+        "code": { "type": "string" },
+        "expiresAt": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["mobile", "code", "expiresAt"]
+    },
+    "SmsQueueItem": {
+      "title": "SmsQueueItem",
+      "description": "Outbound SMS queue for Android SMS Gateway dispatch",
+      "type": "object",
+      "properties": {
+        "recipient": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "sent", "failed"] },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["recipient", "body", "status"]
     }
   },
   "firestore": {
+    "/otps/{mobile}": {
+      "schema": "Otp",
+      "description": "Transient registration OTP verification records"
+    },
+    "/smsQueue/{jobId}": {
+      "schema": "SmsQueueItem",
+      "description": "SMS queue jobs processed by Android Gateway"
+    },
     "/users/{uid}": {
       "schema": "User",
       "description": "User profile metadata"
