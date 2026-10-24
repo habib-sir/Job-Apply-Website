@@ -70,15 +70,26 @@
     </script>
 
     <!-- সংযোগ আগে তৈরি: ফন্ট ও ফাইল হোস্ট -->
+        <!-- সংযোগ আগে তৈরি: ফন্ট ও ফাইল হোস্ট -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://files.bdjobapply.site" crossorigin />
 
-    <!-- ফন্ট: শুধু ব্যবহৃত দুটি ওজন, swap (লেখা সাথে সাথে দেখাবে) -->
+    <!-- ফন্ট: রেন্ডার আটকাবে না (শুধু ৪০০ ও ৭০০ ওজন, swap) -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap"
-      rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" />
+    </noscript>
 
     <script>
       (function(){
