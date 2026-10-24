@@ -8,6 +8,11 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ফন্ট: Hind Siliguri আসার আগেও লেখা যেন ঠিক দেখায় */
+body {
+  font-family: 'Hind Siliguri', 'Noto Sans Bengali', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
