@@ -1,7 +1,7 @@
 // সার্ভিস ওয়ার্কার: অ্যাপের শেল ও ফাইল ক্যাশ, অফলাইন সাপোর্ট, নীরব আপডেট
 // প্রস্তুতির ডেটা (prep-data.json, prep-meta.json) এই ফাইল ধরে না, পেজ নিজে ডিভাইসে রাখে।
 // নতুন ডিপ্লয়ে VERSION বদলান (যেমন v3)। পুরনো ক্যাশ নিজে মুছে যাবে।
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `shell-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 
@@ -53,8 +53,8 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname === DATA_HOST && PREP_FILES.some((f) => url.pathname.endsWith(f))) return;
 
   // পেজ খোলা: ক্যাশের শেল তাৎক্ষণিক, পিছনে নতুন সংস্করণ নামায়
-  if (req.mode === 'navigate') {
-    event.respondWith(shellSWR(req));
+    if (req.mode === 'navigate') {
+    event.respondWith(navigationNetworkFirst(req));
     return;
   }
 
@@ -76,18 +76,17 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-async function shellSWR(req) {
+// পেজ খোলা: আগে নেটওয়ার্ক (সর্বশেষ index.html ও তার সঠিক ফাইল নাম), অফলাইনে ক্যাশ
+async function navigationNetworkFirst(req) {
   const cache = await caches.open(SHELL_CACHE);
-  const cached = await cache.match('/index.html');
-  const network = fetch(req)
-    .then((res) => {
-      if (res.ok) cache.put('/index.html', res.clone());
-      return res;
-    })
-    .catch(() => null);
-
-  if (cached) return cached;
-  return (await network) || Response.error();
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put('/index.html', res.clone());
+    return res;
+  } catch {
+    const shell = await cache.match('/index.html');
+    return shell || Response.error();
+  }
 }
 
 async function cacheFirst(req, cacheName) {
