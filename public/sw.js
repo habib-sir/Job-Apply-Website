@@ -1,7 +1,7 @@
 // সার্ভিস ওয়ার্কার: অ্যাপের শেল ও ফাইল ক্যাশ, অফলাইন সাপোর্ট, নীরব আপডেট
 // প্রস্তুতির ডেটা (prep-data.json, prep-meta.json) এই ফাইল ধরে না, পেজ নিজে ডিভাইসে রাখে।
 // নতুন ডিপ্লয়ে VERSION বদলান (যেমন v3)। পুরনো ক্যাশ নিজে মুছে যাবে।
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `shell-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 
