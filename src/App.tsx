@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminRoute } from './components/auth/AdminRoute';
 import { ScrollToTop } from './components/common/ScrollToTop';
+import { InstallPrompt } from './components/common/InstallPrompt';
 
 // Layouts
 import { PublicLayout } from './layouts/PublicLayout';
@@ -143,6 +144,7 @@ export default function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
+              <InstallPrompt />
             </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
