@@ -1,6 +1,7 @@
-// সার্ভিস ওয়ার্কার: অ্যাপ ফাইল ক্যাশ, অফলাইন সাপোর্ট, নীরব আপডেট
-// নতুন ডিপ্লয়ে VERSION বদলান (যেমন v2) — পুরনো ক্যাশ নিজে মুছে যাবে।
-const VERSION = 'v1';
+// সার্ভিস ওয়ার্কার: অ্যাপের শেল ও ফাইল ক্যাশ, অফলাইন সাপোর্ট, নীরব আপডেট
+// প্রস্তুতির ডেটা (prep-data.json, prep-meta.json) এই ফাইল ধরে না, পেজ নিজে ডিভাইসে রাখে।
+// নতুন ডিপ্লয়ে VERSION বদলান (যেমন v3)। পুরনো ক্যাশ নিজে মুছে যাবে।
+const VERSION = 'v2';
 const SHELL_CACHE = `shell-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 
@@ -9,16 +10,24 @@ const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-19
 const DATA_HOST = 'files.bdjobapply.site';
 
 // এই ডোমেইনগুলোর অনুরোধ কখনো ক্যাশ হবে না (লগইন, ডেটা সেভ)
-const NEVER_CACHE_HOSTS = [
+const PASS_THROUGH_HOSTS = [
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
   'firestore.googleapis.com',
   'bdjob-worker.masterboom2040.workers.dev',
 ];
 
+// প্রস্তুতির ডেটা: সার্ভিস ওয়ার্কার এড়িয়ে যাবে, কোনো R2 রিড হবে না
+const PREP_FILES = ['prep-data.json', 'prep-meta.json'];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      // একটি ফাইল না থাকলেও install যেন ব্যর্থ না হয়
+      await Promise.all(SHELL_URLS.map((u) => cache.add(u).catch(() => null)));
+      await self.skipWaiting();
+    })()
   );
 });
 
@@ -38,23 +47,20 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  if (NEVER_CACHE_HOSTS.includes(url.hostname)) return; // সরাসরি নেটওয়ার্কে যাবে
+  if (PASS_THROUGH_HOSTS.includes(url.hostname)) return;
 
-  // পেজ খোলা (SPA): নেটওয়ার্ক আগে, অফলাইনে ক্যাশের index.html
+  // প্রস্তুতির ডেটা: সরাসরি নেটওয়ার্ক বা পেজের নিজস্ব স্টোর, সার্ভিস ওয়ার্কার নয়
+  if (url.hostname === DATA_HOST && PREP_FILES.some((f) => url.pathname.endsWith(f))) return;
+
+  // পেজ খোলা: ক্যাশের শেল তাৎক্ষণিক, পিছনে নতুন সংস্করণ নামায়
   if (req.mode === 'navigate') {
-    event.respondWith(navigation(req));
+    event.respondWith(shellSWR(req));
     return;
   }
 
-  // Vite-এর হ্যাশ করা ফাইল: একবার ক্যাশ হলে আর বদলায় না
+  // Vite-এর হ্যাশ করা ফাইল: একবার ক্যাশ হলে বদলায় না
   if (url.origin === self.location.origin && url.pathname.startsWith('/assets/')) {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE));
-    return;
-  }
-
-  // প্রস্তুতির ডেটা: ক্যাশ দেখায়, পিছনে নতুন সংস্করণ নামায় (নীরব আপডেট)
-  if (url.hostname === DATA_HOST && url.pathname.endsWith('prep-data.json')) {
-    event.respondWith(staleWhileRevalidate(req, RUNTIME_CACHE));
     return;
   }
 
@@ -70,16 +76,18 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-async function navigation(req) {
+async function shellSWR(req) {
   const cache = await caches.open(SHELL_CACHE);
-  try {
-    const res = await fetch(req);
-    if (res.ok) cache.put('/index.html', res.clone());
-    return res;
-  } catch {
-    const shell = await cache.match('/index.html');
-    return shell || Response.error();
-  }
+  const cached = await cache.match('/index.html');
+  const network = fetch(req)
+    .then((res) => {
+      if (res.ok) cache.put('/index.html', res.clone());
+      return res;
+    })
+    .catch(() => null);
+
+  if (cached) return cached;
+  return (await network) || Response.error();
 }
 
 async function cacheFirst(req, cacheName) {
