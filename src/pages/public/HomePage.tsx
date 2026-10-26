@@ -41,7 +41,6 @@ export const HomePage: React.FC = () => {
         if (isMounted) {
           const clean = (feedPosts || []).filter((j) => !isDummyJob(j));
           setJobs(clean);
-          clean.forEach(precacheJob);
 
           // Speculatively prefetch full circular details of top jobs during idle time
           if (typeof window !== 'undefined' && clean.length > 0) {
