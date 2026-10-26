@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { getFeedLatest, FeedJobSummary } from '../../services/feed';
 import { getCached, setCached, precacheJob, prefetchJobDetail } from '../../services/cache';
-import { DEFAULT_FEED_JOBS } from '../../data/defaultJobs';
 import { isDummyJob } from '../../utils/recoverLocalJobs';
 import { safeFormatBnDate, isJobExpired, getDeadlineDiffMs } from '../../utils/dateUtils';
 import { ExamNotice } from '../../types';
@@ -24,7 +23,7 @@ export const HomePage: React.FC = () => {
       const clean = cached.filter((j) => !isDummyJob(j));
       if (clean.length > 0) return clean;
     }
-    return DEFAULT_FEED_JOBS.filter((j) => !isDummyJob(j));
+    return [];
   });
   const [examNotices, setExamNotices] = useState<ExamItem[]>(() => {
     return getCached<ExamItem[]>('exams_home') || [];
