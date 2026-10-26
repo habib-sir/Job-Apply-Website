@@ -26,7 +26,6 @@ import {
   X,
   RotateCcw,
 } from 'lucide-react';
-import { DEFAULT_JOBS } from '../../data/defaultJobs';
 import DOMPurify from 'dompurify';
 import { useAuth } from '../../context/AuthContext';
 import { formatJobContent } from '../../utils/formatJobContent';
@@ -92,7 +91,7 @@ export const JobDetailsPage: React.FC = () => {
 
         // ১. চলমান তালিকা (হালকা)
         const list = await fetchJobsList();
-        let resolved: any = list.find(matches) || DEFAULT_JOBS.find(matches);
+        let resolved: any = list.find(matches);
 
         // ২. না পেলে মেয়াদ শেষ সার্কুলার আর্কাইব থেকে (পূর্ণ তথ্যসহ)
         if (!resolved) {
