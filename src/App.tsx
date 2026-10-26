@@ -16,7 +16,6 @@ import { PublicLayout } from './layouts/PublicLayout';
 
 // Core Public Pages (Eagerly loaded for bulletproof instant mobile landing & 0ms navigation)
 import { HomePage } from './pages/public/HomePage';
-import { JobsPage } from './pages/public/JobsPage';
 import { JobDetailsPage } from './pages/public/JobDetailsPage';
 import { LoginPage } from './pages/public/LoginPage';
 
@@ -26,6 +25,7 @@ const AdminLayout = lazy(() => import('./layouts/AdminLayout').then((m) => ({ de
 const RegisterPage = lazy(() => import('./pages/public/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 
 // Lazy Loaded Auxiliary Public Pages
+const JobsPage = lazy(() => import('./pages/public/JobsPage').then((m) => ({ default: m.JobsPage })));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const SitemapView = lazy(() => import('./pages/public/SitemapView').then((m) => ({ default: m.SitemapView })));
 const RobotsView = lazy(() => import('./pages/public/RobotsView').then((m) => ({ default: m.RobotsView })));
