@@ -9,7 +9,6 @@ import { Spinner } from '../../components/common/Spinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useToast } from '../../components/common/Toast';
 import { isDummyJob } from '../../utils/recoverLocalJobs';
-import { DEFAULT_JOBS } from '../../data/defaultJobs';
 import { safeFormatBnDate } from '../../utils/dateUtils';
 import { sortJobsByDeadline } from '../../utils/jobSort';
 import { Plus, Edit, Trash2, ExternalLink, Send, Archive, ChevronDown, ChevronRight } from 'lucide-react';
@@ -32,7 +31,7 @@ export const AdminJobsListPage: React.FC = () => {
     const cached = getCached<JobCircular[]>('admin_jobs') || [];
     const clean = cached.filter((j) => !isDummyJob(j));
     if (clean.length > 0) return sortJobsByDeadline(clean);
-    return sortJobsByDeadline(DEFAULT_JOBS.filter((j) => !isDummyJob(j)));
+    return sortJobsByDeadline([]);
   });
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
