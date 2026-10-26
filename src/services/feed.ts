@@ -1,6 +1,5 @@
 import { getCached, setCached } from './cache';
 import { JobCategory } from '../types';
-import { DEFAULT_FEED_JOBS } from '../data/defaultJobs';
 import { R2_BASE } from './jobsStore';
 import { sortJobsByDeadline } from '../utils/jobSort';
 
@@ -22,9 +21,8 @@ export interface FeedDocument {
 const CACHE_KEY = 'feed_latest';
 
 /**
- * হোমপেজের ফিড: R2 feed.json → same-origin /feed.json → bundled fallback
- * চলমান সার্কুলার আগে, মেয়াদ শেষ সবার নিচে।
- * Firestore ব্যবহার করা হয় না।
+ * হোমপেজের ফিড: R2 feed.json → same-origin /feed.json।
+ * চলমান সার্কুলার আগে, মেয়াদ শেষ সবার নিচে। R2 ই একমাত্র উৎস।
  */
 export async function getFeedLatest(forceRefresh = false): Promise<FeedJobSummary[]> {
   if (!forceRefresh) {
@@ -39,8 +37,7 @@ export async function getFeedLatest(forceRefresh = false): Promise<FeedJobSummar
       if (!res.ok) continue;
       const data = await res.json();
       if (Array.isArray(data?.posts) && data.posts.length > 0) {
-        const posts = data.posts as FeedJobSummary[];
-        const sorted = sortJobsByDeadline<FeedJobSummary>(posts);
+        const sorted = sortJobsByDeadline<FeedJobSummary>(data.posts as FeedJobSummary[]);
         setCached(CACHE_KEY, sorted);
         return sorted;
       }
@@ -49,14 +46,11 @@ export async function getFeedLatest(forceRefresh = false): Promise<FeedJobSummar
     }
   }
 
-  const fallback = sortJobsByDeadline<FeedJobSummary>(DEFAULT_FEED_JOBS as FeedJobSummary[]);
-  setCached(CACHE_KEY, fallback);
-  return fallback;
+  return [];
 }
 
 /**
  * @deprecated Firestore সরানো হয়েছে। feed.json এখন Worker তৈরি করে।
- * পুরনো import ভাঙা না হওয়ার জন্য রাখা হয়েছে।
  */
 export async function syncJobToFeed(): Promise<void> {
   return;
