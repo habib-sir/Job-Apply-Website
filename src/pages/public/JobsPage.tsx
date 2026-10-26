@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCached, setCached, precacheJob, getCachedWithSWR, prefetchJobDetail } from '../../services/cache';
 import { JobCircular } from '../../types';
-import { DEFAULT_JOBS } from '../../data/defaultJobs';
 import { isDummyJob } from '../../utils/recoverLocalJobs';
 import { safeFormatBnDate, isJobExpired } from '../../utils/dateUtils';
 import { sortJobsByDeadline } from '../../utils/jobSort';
@@ -21,7 +20,7 @@ export const JobsPage: React.FC = () => {
       const clean = page1.filter((j) => !isDummyJob(j));
       if (clean.length > 0) return clean;
     }
-    return DEFAULT_JOBS.filter((j) => !isDummyJob(j));
+    return []
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState(() => {
