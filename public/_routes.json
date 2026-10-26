@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/icons/*",
+    "/*.png",
+    "/*.jpg",
+    "/*.webp",
+    "/*.svg",
+    "/*.js",
+    "/*.css",
+    "/*.json",
+    "/*.xml",
+    "/*.txt",
+    "/*.zip",
+    "/*.webmanifest",
+    "/*.html",
+    "/_redirects",
+    "/_headers"
+  ]
+}
