@@ -141,9 +141,6 @@ export function setCached<T>(key: string, data: T): void {
   const entry: CacheEntry<T> = { data, timestamp: Date.now() };
   cacheStore.set(key, entry);
   safeLocalStorageSet(key, entry);
-  try {
-    sessionStorage.setItem(`cache_${key}`, JSON.stringify(entry));
-  } catch {}
 }
 
 /**
