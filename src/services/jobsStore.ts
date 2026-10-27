@@ -4,12 +4,8 @@ const TOKEN_KEY = 'admin_worker_token';
 
 const isPublished = (j: any) => j && j.status !== 'draft';
 
-/**
- * জবের তালিকা পড়া।
- * fresh = false (পাবলিক): R2 → same-origin /jobs.json, ড্রাফট বাদ। এতে শুধু চলমান সার্কুলার থাকে।
- * fresh = true (অ্যাডমিন): শুধু R2, ক্যাশ ছাড়া, চলমান সব জব (ড্রাফটসহ)
- */
-export async function fetchJobsList(fresh = false): Promise<any[]> {
+/** R2 থেকে সরাসরি জবের তালিকা আনে (ক্যাশ ছাড়া বা পাবলিক URL সহ) */
+async function fetchJobsListRaw(fresh = false): Promise<any[]> {
   const sources = fresh
     ? [`${R2_BASE}/jobs.json?t=${Date.now()}`]
     : [`${R2_BASE}/jobs.json`, '/jobs.json'];
@@ -29,6 +25,30 @@ export async function fetchJobsList(fresh = false): Promise<any[]> {
 
   if (fresh) throw new Error('R2 থেকে জবের তালিকা পড়া যায়নি');
   return [];
+}
+
+// এক পেজে একই তালিকা বারবার না আনতে মেমোরি ক্যাশ ও চলমান অনুরোধ শেয়ার
+let jobsCache: { at: number; data: any[] } | null = null;
+let jobsInflight: Promise<any[]> | null = null;
+
+/**
+ * জবের তালিকা।
+ * fresh = false (পাবলিক): ১ মিনিটের মেমোরি ক্যাশ, একই সময়ের অনুরোধ একসাথে।
+ * fresh = true (অ্যাডমিন): সবসময় নেটওয়ার্ক থেকে, ড্রাফটসহ।
+ */
+export async function fetchJobsList(fresh = false): Promise<any[]> {
+  if (!fresh && jobsCache && Date.now() - jobsCache.at < 60_000) return jobsCache.data;
+  if (!fresh && jobsInflight) return jobsInflight;
+
+  jobsInflight = fetchJobsListRaw(fresh)
+    .then((data) => {
+      if (!fresh) jobsCache = { at: Date.now(), data };
+      return data;
+    })
+    .finally(() => {
+      jobsInflight = null;
+    });
+  return jobsInflight;
 }
 
 /**
@@ -97,6 +117,8 @@ async function postAllJobs(all: any[]): Promise<void> {
   if (!res.ok) {
     throw new Error(`সেভ ব্যর্থ (HTTP ${res.status})`);
   }
+  // সেভের পর ক্যাশ বাতিল, যাতে নতুন তালিকা দেখা যায়
+  jobsCache = null;
 }
 
 /**
