@@ -9,7 +9,7 @@ import { ExamNotice } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/common/Modal';
 import { HomeUrgentDeadlines } from '../../components/home/HomeUrgentDeadlines';
-import { ArrowRight, Calendar, Sparkles, Award } from 'lucide-react';
+import { ArrowRight, Calendar, Sparkles, Award, UserPlus, LogIn, FileText, Send, WalletCards, ShieldCheck } from 'lucide-react';
 
 // R2-তে সংরক্ষিত নোটিশ (ছবির URL সহ হতে পারে)
 type ExamItem = ExamNotice & { imageUrl?: string };
@@ -290,6 +290,36 @@ export const HomePage: React.FC = () => {
               সকল চাকরি দেখুন ({jobs.length}টি)
             </button>
           </Link>
+        </div>
+      </section>
+
+      {/* Application guide */}
+      <section className="max-w-6xl mx-auto px-4" aria-labelledby="application-guide-title">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 md:p-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">ধাপে ধাপে সহায়তা</p>
+              <h2 id="application-guide-title" className="mt-1 text-2xl font-extrabold text-gray-950">কীভাবে নতুন অ্যাকাউন্ট করে আবেদন করবেন?</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-700">একবার সিভি সেভ করুন, এরপর পছন্দের চাকরি বেছে আবেদন করুন। পেমেন্টের আগে সবসময় নির্দিষ্ট application screen-এর নির্দেশনা মিলিয়ে নিন।</p>
+            </div>
+            <Link to="/how-to-apply" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">বিস্তারিত নিয়ম <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            {[
+              { icon: UserPlus, title: 'অ্যাকাউন্ট', text: 'রেজিস্ট্রেশন করুন' },
+              { icon: LogIn, title: 'লগইন', text: 'ড্যাশবোর্ডে যান' },
+              { icon: FileText, title: 'সিভি', text: 'তথ্য সেভ করুন' },
+              { icon: Send, title: 'আবেদন', text: 'চাকরি বেছে পাঠান' },
+              { icon: WalletCards, title: 'পেমেন্ট', text: 'TrxID দিন' },
+              { icon: ShieldCheck, title: 'যাচাই', text: 'কপি দেখে নিশ্চিত করুন' },
+            ].map(({ icon: Icon, title, text }, index) => (
+              <div key={title} className="rounded-xl border border-emerald-100 bg-white p-4">
+                <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-800 text-xs font-extrabold text-white">{index + 1}</span><Icon className="h-4 w-4 text-emerald-800" aria-hidden="true" /></div>
+                <h3 className="mt-3 text-sm font-bold text-gray-950">{title}</h3><p className="mt-1 text-xs text-gray-700">{text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-5 text-xs font-semibold leading-6 text-emerald-950">নিরাপত্তা: payment number শুধু নির্বাচিত চাকরির verified screen থেকে নিন। PIN, OTP বা password কাউকে দেবেন না।</p>
         </div>
       </section>
 

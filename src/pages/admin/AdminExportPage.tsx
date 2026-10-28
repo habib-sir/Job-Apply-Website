@@ -91,7 +91,7 @@ export const AdminExportPage: React.FC = () => {
           `"${app.district || ''}"`,
           `"${app.educationLevel || ''}"`,
           `"${app.status || ''}"`,
-          `"${app.payment?.trxId || ''}"`,
+          `"${app.payment?.senderNumber || ''}"`,
           `"${app.fee?.total || 0}"`,
           `"${app.createdAt?.toDate ? app.createdAt.toDate().toISOString() : ''}"`,
         ];

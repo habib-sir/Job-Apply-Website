@@ -54,7 +54,7 @@ export const JobsPage: React.FC = () => {
       const all = (await loadAllJobs(bypassCache)).filter((j) => !isDummyJob(j));
 
       if (all.length === 0) {
-        setJobs(DEFAULT_JOBS.filter((j) => !isDummyJob(j)));
+        setJobs([]);
         setHasMore(false);
         return;
       }
@@ -89,7 +89,7 @@ export const JobsPage: React.FC = () => {
       setHasMore(start + ITEMS_PER_PAGE < list.length);
     } catch (err) {
       console.warn('Jobs load failed:', err);
-      setJobs(DEFAULT_JOBS.filter((j) => !isDummyJob(j)));
+      setJobs([]);
       setHasMore(false);
     } finally {
       setLoading(false);

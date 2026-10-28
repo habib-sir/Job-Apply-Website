@@ -26,6 +26,9 @@ const RegisterPage = lazy(() => import('./pages/public/RegisterPage').then((m) =
 
 // Lazy Loaded Auxiliary Public Pages
 const JobsPage = lazy(() => import('./pages/public/JobsPage').then((m) => ({ default: m.JobsPage })));
+const HowToApplyPage = lazy(() => import('./pages/public/HowToApplyPage').then((m) => ({ default: m.HowToApplyPage })));
+const AboutPage = lazy(() => import('./pages/public/AboutPage').then((m) => ({ default: m.AboutPage })));
+const ContactPage = lazy(() => import('./pages/public/ContactPage').then((m) => ({ default: m.ContactPage })));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const SitemapView = lazy(() => import('./pages/public/SitemapView').then((m) => ({ default: m.SitemapView })));
 const RobotsView = lazy(() => import('./pages/public/RobotsView').then((m) => ({ default: m.RobotsView })));
@@ -80,6 +83,9 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/jobs" element={<JobsPage />} />
                     <Route path="/jobs/:slug" element={<JobDetailsPage />} />
+                    <Route path="/how-to-apply" element={<HowToApplyPage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
