@@ -143,8 +143,8 @@ function schemaForJob(job) {
     description: stripHtml(job.content || job.title).slice(0, 5000),
     datePosted: datePosted ? new Date(datePosted).toISOString() : undefined,
     validThrough: job.deadline ? new Date(job.deadline).toISOString() : undefined,
-    employmentType: 'FULL_TIME',
-    hiringOrganization: { '@type': 'Organization', name: job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ' },
+    ...(job.employmentType ? { employmentType: job.employmentType } : {}),
+    hiringOrganization: { '@type': 'Organization', name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ') },
     jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressCountry: 'BD' } },
   };
   return JSON.parse(JSON.stringify(schema));

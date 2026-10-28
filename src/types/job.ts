@@ -29,6 +29,8 @@ export interface JobCircular {
   circularImages?: string[];
   deadline: any;
   applyLink: string;
+  organizationName?: string;
+  employmentType?: string;
   applyServiceEnabled: boolean;
   applicationFee: number;
   serviceCharge: number;

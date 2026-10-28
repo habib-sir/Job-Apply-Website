@@ -237,6 +237,12 @@ export const JobDetailsPage: React.FC = () => {
     circularImagesList[0] ||
     `${baseDomain}/og-image.jpg`;
 
+  const schemaDescription = String(job.content || metaDescription)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 5000);
+
   // Google JobPosting & BreadcrumbList JSON-LD Schemas (Safely stringified)
   const structuredData = {
     '@context': 'https://schema.org',
@@ -245,14 +251,14 @@ export const JobDetailsPage: React.FC = () => {
         '@type': 'JobPosting',
         '@id': `${canonicalUrl}#job`,
         title: job.title,
-        description: metaDescription,
+        description: schemaDescription,
         url: canonicalUrl,
-        datePosted: publishedDate ? publishedDate.toISOString() : new Date().toISOString(),
+        datePosted: publishedDate ? publishedDate.toISOString() : undefined,
         validThrough: deadlineDate ? deadlineDate.toISOString() : undefined,
-        employmentType: 'FULL_TIME',
+        ...(job.employmentType ? { employmentType: job.employmentType } : {}),
         hiringOrganization: {
           '@type': 'Organization',
-          name: job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ',
+          name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ'),
           sameAs: job.applyLink || 'https://teletalk.com.bd',
         },
         jobLocation: {
