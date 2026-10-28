@@ -8,6 +8,7 @@ import { GoogleSignInButton } from '../../components/common/GoogleSignInButton';
 import { useToast } from '../../components/common/Toast';
 import { Spinner } from '../../components/common/Spinner';
 import { sendRegistrationOtp, verifyRegistrationOtp, normalizeMobile } from '../../services/smsService';
+import { Helmet } from 'react-helmet-async';
 
 /**
  * Toggle for SMS OTP during registration.
@@ -199,6 +200,12 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-8">
+      <Helmet>
+        <title>রেজিস্ট্রেশন | BD Job Apply</title>
+        <meta name="description" content="BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।" />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://bdjobapply.site/register" />
+      </Helmet>
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
         {step === 'form' ? (
           <>

@@ -7,6 +7,7 @@ import { Button } from '../../components/common/Button';
 import { GoogleSignInButton } from '../../components/common/GoogleSignInButton';
 import { useToast } from '../../components/common/Toast';
 import { Spinner } from '../../components/common/Spinner';
+import { Helmet } from 'react-helmet-async';
 
 export const LoginPage: React.FC = () => {
   const [identifier, setIdentifier] = useState('');
@@ -72,6 +73,12 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
+      <Helmet>
+        <title>লগইন | BD Job Apply</title>
+        <meta name="description" content="BD Job Apply অ্যাকাউন্টে লগইন করুন।" />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://bdjobapply.site/login" />
+      </Helmet>
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-3">

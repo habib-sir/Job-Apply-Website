@@ -89,22 +89,23 @@ async function generateSitemaps() {
   const staticUrls = [
     { loc: `${BASE}/`, priority: '1.0', changefreq: 'hourly', lastmod: today },
     { loc: `${BASE}/jobs`, priority: '0.9', changefreq: 'hourly', lastmod: today },
-    { loc: `${BASE}/login`, priority: '0.4', changefreq: 'monthly', lastmod: today },
-    { loc: `${BASE}/register`, priority: '0.5', changefreq: 'monthly', lastmod: today },
   ];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-static.xml'), urlsetXml(staticUrls));
   children.push({ loc: `${BASE}/sitemap-static.xml`, lastmod: today });
 
   // ২. চলমান সার্কুলার (R2 jobs.json, শুধু চলমান)
   const active = await getJson(`${R2}/jobs.json`, []);
-  const activeUrls = (Array.isArray(active) ? active : [])
+  const activeUrls = [...new Map((Array.isArray(active) ? active : [])
     .filter((j) => j && j.status !== 'draft')
+    .filter((j) => j.slug || j.id)
     .map((j) => ({
       loc: jobUrl(j.slug || j.id),
       priority: '0.8',
       changefreq: 'daily',
       lastmod: dateOnly(j.updatedAt || j.publishedAt, today),
-    }));
+    }))
+    .map((entry) => [entry.loc, entry])
+  ).values()];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-active.xml'), urlsetXml(activeUrls));
   children.push({ loc: `${BASE}/sitemap-active.xml`, lastmod: today });
   console.log(`Sitemap: ${activeUrls.length}টি চলমান সার্কুলার`);

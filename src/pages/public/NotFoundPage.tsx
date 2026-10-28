@@ -2,10 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { AlertTriangle } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 export const NotFoundPage: React.FC = () => {
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
+      <Helmet>
+        <title>পৃষ্ঠা পাওয়া যায়নি | BD Job Apply</title>
+        <meta name="description" content="আপনি যে পৃষ্ঠাটি খুঁজছেন তা পাওয়া যায়নি।" />
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
       <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-4">
         <AlertTriangle className="w-8 h-8" />
       </div>
