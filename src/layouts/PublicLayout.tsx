@@ -10,7 +10,7 @@ const FACEBOOK_URL = 'https://www.facebook.com/bdjobapply.site';
 const publicLinks = [
   { to: '/', label: 'হোম' },
   { to: '/jobs', label: 'সকল চাকরি' },
-  { to: '/jobs?category=govt', label: 'সরকারি চাকরি', icon: Landmark },
+  { to: '/sorkari-chakri', label: 'সরকারি চাকরি', icon: Landmark },
   { to: '/jobs?category=private', label: 'বেসরকারি চাকরি', icon: Building2 },
   { to: '/prep', label: 'প্রস্তুতি', icon: BookOpen },
   { to: '/how-to-apply', label: 'আবেদনের নিয়ম', icon: HelpCircle },

@@ -82,6 +82,7 @@ export default function App() {
                   <Route element={<PublicLayout />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/jobs" element={<JobsPage />} />
+                    <Route path="/sorkari-chakri" element={<JobsPage />} />
                     <Route path="/jobs/:slug" element={<JobDetailsPage />} />
                     <Route path="/how-to-apply" element={<HowToApplyPage />} />
                     <Route path="/about" element={<AboutPage />} />

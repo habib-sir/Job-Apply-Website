@@ -89,6 +89,7 @@ async function generateSitemaps() {
   const staticUrls = [
     { loc: `${BASE}/`, priority: '1.0', changefreq: 'hourly', lastmod: today },
     { loc: `${BASE}/jobs`, priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: `${BASE}/sorkari-chakri`, priority: '0.95', changefreq: 'hourly', lastmod: today },
   ];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-static.xml'), urlsetXml(staticUrls));
   children.push({ loc: `${BASE}/sitemap-static.xml`, lastmod: today });

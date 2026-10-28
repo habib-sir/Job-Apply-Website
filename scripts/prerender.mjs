@@ -94,7 +94,7 @@ function withPageMetadata(template, { title, description, canonical, type = 'web
 
 function layout(content) {
   return `<main lang="bn" style="max-width:960px;margin:0 auto;padding:32px 16px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#111827">
-    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/jobs?category=govt" style="color:#065f46">সরকারি চাকরি</a></nav></header>
+    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/sorkari-chakri" style="color:#065f46">সরকারি চাকরি</a></nav></header>
     ${content}
   </main>`;
 }
@@ -107,6 +107,11 @@ function homepageBody(jobs) {
 function jobsBody(jobs) {
   const items = jobs.map((job) => `<li style="margin:12px 0"><a href="${detailUrl(job)}" style="color:#065f46;font-weight:700">${esc(job.title)}</a><span> — ${esc(job.category === 'govt' ? 'সরকারি চাকরি' : 'অন্যান্য চাকরি')}, শেষ তারিখ: ${esc(formatDate(job.deadline))}</span></li>`).join('');
   return layout(`<h1>সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি</h1><p>সরকারি ও অন্যান্য চাকরির সর্বশেষ প্রকাশিত নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।</p><ul>${items}</ul>`);
+}
+
+function governmentJobsBody(jobs) {
+  const items = jobs.map((job) => `<li style="margin:12px 0"><a href="${detailUrl(job)}" style="color:#065f46;font-weight:700">${esc(job.title)}</a><span> — আবেদনের শেষ তারিখ: ${esc(formatDate(job.deadline))}</span></li>`).join('');
+  return layout(`<h1>সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি</h1><p>বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি এবং আবেদনের শেষ তারিখ দেখুন।</p><ul>${items}</ul>`);
 }
 
 function detailBody(job) {
@@ -162,6 +167,8 @@ async function main() {
   const homeDescription = 'বাংলাদেশের সরকারি চাকরির খবর, নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা এবং আবেদনের শেষ তারিখ।';
   writeRoute('.', withPageMetadata(template, { title: 'সরকারি চাকরি ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: homeDescription, canonical: `${BASE}/`, schema: schemaForHome(), body: homepageBody(unique) }));
   writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: `${BASE}/jobs`, schema: schemaForJobs(), body: jobsBody(unique) }));
+  const governmentJobs = unique.filter((job) => job.category === 'govt');
+  writeRoute('sorkari-chakri', withPageMetadata(template, { title: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/sorkari-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/sorkari-chakri`, inLanguage: 'bn-BD' }, body: governmentJobsBody(governmentJobs) }));
   writeRoute('login', withPageMetadata(template, { title: 'লগইন | BD Job Apply', description: 'BD Job Apply অ্যাকাউন্টে লগইন করুন।', canonical: `${BASE}/login`, noindex: true, body: noindexBody('ইউজার লগইন', 'অ্যাকাউন্টে প্রবেশ করতে লগইন করুন।') }));
   writeRoute('register', withPageMetadata(template, { title: 'রেজিস্ট্রেশন | BD Job Apply', description: 'BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।', canonical: `${BASE}/register`, noindex: true, body: noindexBody('নতুন অ্যাকাউন্ট তৈরি', 'দ্রুত চাকরির আবেদনের জন্য নিবন্ধন করুন।') }));
 

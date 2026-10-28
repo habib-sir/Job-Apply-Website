@@ -15,6 +15,7 @@ const ITEMS_PER_PAGE = 20;
 
 export const JobsPage: React.FC = () => {
   const location = useLocation();
+  const isGovernmentLanding = location.pathname === '/sorkari-chakri';
   const [jobs, setJobs] = useState<JobCircular[]>(() => {
     const page1 = getCached<JobCircular[]>('jobs_page_1');
     if (page1 && page1.length > 0) {
@@ -28,7 +29,7 @@ export const JobsPage: React.FC = () => {
     return new URLSearchParams(window.location.search).get('search') || '';
   });
   const [categoryFilter, setCategoryFilter] = useState<string>(() => {
-    return new URLSearchParams(window.location.search).get('category') || 'all';
+    return new URLSearchParams(window.location.search).get('category') || (isGovernmentLanding ? 'govt' : 'all');
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -40,12 +41,12 @@ export const JobsPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const nextSearch = params.get('search') || '';
-    const nextCategory = params.get('category') || 'all';
+    const nextCategory = params.get('category') || (isGovernmentLanding ? 'govt' : 'all');
 
     setSearchTerm((current) => (current === nextSearch ? current : nextSearch));
     setCategoryFilter((current) => (current === nextCategory ? current : nextCategory));
     setCurrentPage(1);
-  }, [location.search]);
+  }, [location.pathname, location.search, isGovernmentLanding]);
 
   // সব জব একবার লোড করে ক্যাশ করা হয়; ফিল্টার, সাজানো ও পেজিং ব্রাউজারে হয়
   const loadAllJobs = async (bypassCache: boolean): Promise<JobCircular[]> => {
@@ -140,34 +141,34 @@ export const JobsPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <Helmet>
-        <title>সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site</title>
+        <title>{isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'}</title>
         <meta
           name="description"
-          content="চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে নির্ভুল টেলিটক আবেদন করুন।"
+          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে নির্ভুল টেলিটক আবেদন করুন।'}
         />
         <meta
           name="keywords"
           content="সরকারি চাকরির খবর, চাকরির খবর ২০২৬, bd job circular, teletalk job apply, সরকারি নিয়োগ বিজ্ঞপ্তি, bdjobapply"
         />
-        <link rel="canonical" href="https://bdjobapply.site/jobs" />
+        <link rel="canonical" href={`https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`} />
 
         {/* OpenGraph */}
         <meta property="og:site_name" content="BD Job Apply" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site" />
+        <meta property="og:title" content={isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'} />
         <meta
           property="og:description"
-          content="চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।"
+          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।'}
         />
-        <meta property="og:url" content="https://bdjobapply.site/jobs" />
+        <meta property="og:url" content={`https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`} />
         <meta property="og:image" content="https://bdjobapply.site/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site" />
+        <meta name="twitter:title" content={isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'} />
         <meta
           name="twitter:description"
-          content="চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।"
+          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।'}
         />
         <meta name="twitter:image" content="https://bdjobapply.site/og-image.jpg" />
 
@@ -175,15 +176,15 @@ export const JobsPage: React.FC = () => {
           {JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
-            name: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি',
-            url: 'https://bdjobapply.site/jobs',
-            description: 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬',
+            name: isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি' : 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি',
+            url: `https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`,
+            description: isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ২০২৬' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬',
           })}
         </script>
       </Helmet>
 
       <div className="border-b border-gray-200 pb-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি' : 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি'}</h1>
         <p className="text-xs text-gray-500 mt-1">
           পাতা {currentPage} • প্রতি পেজে ২০টি বিজ্ঞপ্তি • চলমান বিজ্ঞপ্তি আগে, মেয়াদ শেষ সবার নিচে
         </p>
