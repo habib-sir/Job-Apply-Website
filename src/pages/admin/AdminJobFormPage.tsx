@@ -68,7 +68,11 @@ export const AdminJobFormPage: React.FC = () => {
   const [status, setStatus] = useState<JobStatus>('published');
   const [publishedAt, setPublishedAt] = useState('');
   const [content, setContent] = useState('');
+  const [applicationStartDate, setApplicationStartDate] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [salaryGrade, setSalaryGrade] = useState('');
+  const [salaryMin, setSalaryMin] = useState<number | ''>('');
+  const [salaryMax, setSalaryMax] = useState<number | ''>('');
   const [applyLink, setApplyLink] = useState('');
   const [applyServiceEnabled, setApplyServiceEnabled] = useState(true);
   const [applicationFee, setApplicationFee] = useState<number>(0);
@@ -132,6 +136,12 @@ export const AdminJobFormPage: React.FC = () => {
       if (data.slug) setSlug(data.slug);
       if (data.category) setCategory(data.category);
       if (data.deadline) setDeadline(data.deadline);
+      if (data.applicationStartDate) setApplicationStartDate(data.applicationStartDate);
+      if (data.baseSalary) {
+        setSalaryGrade(data.baseSalary.grade || '');
+        setSalaryMin(data.baseSalary.minValue ?? '');
+        setSalaryMax(data.baseSalary.maxValue ?? '');
+      }
       if (data.applyLink) setApplyLink(data.applyLink);
       if (data.circularLink) setCircularLink(data.circularLink);
       if (data.applicationFee !== undefined) setApplicationFee(Number(data.applicationFee) || 0);
@@ -250,10 +260,17 @@ export const AdminJobFormPage: React.FC = () => {
           setCategory(data.category || 'govt');
           setStatus(data.status || 'published');
           setContent(data.content || '');
+          if (data.applicationStartDate) {
+            const startObj = data.applicationStartDate.toDate ? data.applicationStartDate.toDate() : new Date(data.applicationStartDate);
+            if (!isNaN(startObj.getTime())) setApplicationStartDate(startObj.toISOString().slice(0, 16));
+          }
           setApplyLink(data.applyLink || '');
           setApplyServiceEnabled(data.applyServiceEnabled !== undefined ? Boolean(data.applyServiceEnabled) : true);
           setApplicationFee(data.applicationFee || 0);
           setServiceCharge(data.serviceCharge || 0);
+          setSalaryGrade(data.baseSalary?.grade || '');
+          setSalaryMin(data.baseSalary?.minValue ?? '');
+          setSalaryMax(data.baseSalary?.maxValue ?? '');
           setCircularLink(data.circularLink || data.circularFile || '');
           if (Array.isArray(data.circularImages)) {
             setCircularImages(data.circularImages);
@@ -562,6 +579,7 @@ export const AdminJobFormPage: React.FC = () => {
       const finalPosts = cleanPosts.length > 0 ? cleanPosts : [{ name: title.trim(), count: 1, district: 'ALL' }];
 
       const deadlineDate = deadline ? new Date(deadline) : null;
+      const applicationStartDateValue = applicationStartDate ? new Date(applicationStartDate) : null;
       const pubDate = status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date();
       const nowIso = new Date().toISOString();
 
@@ -572,12 +590,24 @@ export const AdminJobFormPage: React.FC = () => {
         category: category || 'govt',
         status: status || 'published',
         content: content || '',
+        applicationStartDate: applicationStartDateValue ? applicationStartDateValue.toISOString() : null,
         deadline: deadlineDate ? deadlineDate.toISOString() : null,
         publishedAt: pubDate.toISOString(),
         applyLink: (applyLink || '').trim(),
         applyServiceEnabled: Boolean(applyServiceEnabled),
         applicationFee: Number(applicationFee) || 0,
         serviceCharge: Number(serviceCharge) || 0,
+        ...(salaryGrade.trim() || salaryMin !== '' || salaryMax !== ''
+          ? {
+              baseSalary: {
+                ...(salaryGrade.trim() ? { grade: salaryGrade.trim() } : {}),
+                currency: 'BDT',
+                ...(salaryMin !== '' ? { minValue: Number(salaryMin) } : {}),
+                ...(salaryMax !== '' ? { maxValue: Number(salaryMax) } : {}),
+                unitText: 'MONTH',
+              },
+            }
+          : {}),
         hasCover: Boolean(hasCover),
         circularLink: (circularLink || '').trim() || null,
         circularImages: circularImages,
@@ -810,9 +840,15 @@ export const AdminJobFormPage: React.FC = () => {
           <Input label="প্রকাশের সময়সূচী" type="datetime-local" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} requiredStar />
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input label="আবেদনের শুরুর তারিখ ও সময়" type="datetime-local" value={applicationStartDate} onChange={(e) => setApplicationStartDate(e.target.value)} />
           <Input label="আবেদনের শেষ তারিখ ও সময়" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} requiredStar />
           <Input label="অফিসিয়াল Teletalk আবেদন লিংক" placeholder="http://br.teletalk.com.bd" value={applyLink} onChange={(e) => setApplyLink(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <Input label="বেতন গ্রেড" placeholder="যেমন: ১৬তম গ্রেড" value={salaryGrade} onChange={(e) => setSalaryGrade(e.target.value)} />
+          <Input label="বেতন সর্বনিম্ন (৳)" type="number" placeholder="যেমন: ২১৯০০" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value === '' ? '' : Number(e.target.value))} />
+          <Input label="বেতন সর্বোচ্চ (৳)" type="number" placeholder="যেমন: ৫২৯০০" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value === '' ? '' : Number(e.target.value))} />
         </div>
       </div>
 

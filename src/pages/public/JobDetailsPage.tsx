@@ -207,6 +207,7 @@ export const JobDetailsPage: React.FC = () => {
   };
 
   const deadlineDate = parseSafeDate(job.deadline);
+  const applicationStartDate = parseSafeDate(job.applicationStartDate);
   const publishedDate = parseSafeDate(job.publishedAt);
 
   const isExpired = deadlineDate ? deadlineDate.getTime() < now.getTime() : false;
@@ -243,13 +244,11 @@ export const JobDetailsPage: React.FC = () => {
     .trim()
     .slice(0, 5000);
 
-  const schemaAddress = job.location && Object.values(job.location).some(Boolean)
-    ? {
-        '@type': 'PostalAddress',
-        addressCountry: 'BD',
-        ...job.location,
-      }
-    : undefined;
+  const schemaAddress = {
+    '@type': 'PostalAddress',
+    addressCountry: 'BD',
+    ...(job.location || {}),
+  };
   const schemaSalary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
     ? {
         '@type': 'MonetaryAmount',
@@ -281,7 +280,7 @@ export const JobDetailsPage: React.FC = () => {
           name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ'),
           sameAs: job.applyLink || 'https://teletalk.com.bd',
         },
-        ...(schemaAddress ? { jobLocation: { '@type': 'Place', address: schemaAddress } } : {}),
+        jobLocation: { '@type': 'Place', address: schemaAddress },
         ...(schemaSalary ? { baseSalary: schemaSalary } : {}),
       },
       {
@@ -408,6 +407,20 @@ export const JobDetailsPage: React.FC = () => {
               <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
                 <Send className="w-4 h-4" />
                 <span>অনলাইন আবেদন ও সফট কপি সার্ভিস চালু</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 pt-1">
+            <div><strong>চাকরির স্থান:</strong> বাংলাদেশ</div>
+            {applicationStartDate && <div><strong>আবেদন শুরু:</strong> {applicationStartDate.toLocaleString('bn-BD')}</div>}
+            {job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null) && (
+              <div>
+                <strong>বেতন:</strong>{' '}
+                {job.baseSalary.grade ? `${job.baseSalary.grade}, ` : ''}
+                {job.baseSalary.minValue != null ? Number(job.baseSalary.minValue).toLocaleString('bn-BD') : '—'}
+                {'–'}
+                {job.baseSalary.maxValue != null ? Number(job.baseSalary.maxValue).toLocaleString('bn-BD') : '—'} টাকা (মাসিক)
               </div>
             )}
           </div>

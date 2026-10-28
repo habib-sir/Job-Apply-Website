@@ -24,6 +24,7 @@ export interface JobLocation {
 }
 
 export interface JobSalary {
+  grade?: string;
   currency?: string;
   minValue?: number;
   maxValue?: number;
@@ -42,6 +43,7 @@ export interface JobCircular {
   circularFile?: string | null;
   circularImages?: string[];
   deadline: any;
+  applicationStartDate?: any;
   applyLink: string;
   organizationName?: string;
   employmentType?: string;

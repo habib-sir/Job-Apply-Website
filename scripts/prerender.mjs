@@ -116,7 +116,12 @@ function governmentJobsBody(jobs) {
 
 function detailBody(job) {
   const summary = stripHtml(job.content || '').slice(0, 900);
-  return layout(`<article><p style="color:#047857;font-weight:700">${esc(job.category === 'govt' ? 'সরকারি চাকরি' : 'চাকরি বিজ্ঞপ্তি')}</p><h1>${esc(job.title)}</h1><p><strong>আবেদনের শেষ তারিখ:</strong> ${esc(formatDate(job.deadline))}</p><p>${esc(summary)}</p><p><a href="${detailUrl(job)}" style="color:#065f46">বিস্তারিত বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন</a></p></article>`);
+  const salary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
+    ? `${job.baseSalary.grade ? `${job.baseSalary.grade}, ` : ''}${job.baseSalary.minValue ?? '—'}–${job.baseSalary.maxValue ?? '—'} টাকা (মাসিক)`
+    : '';
+  const start = job.applicationStartDate ? `<p><strong>আবেদন শুরু:</strong> ${esc(formatDate(job.applicationStartDate))}</p>` : '';
+  const pay = salary ? `<p><strong>বেতন:</strong> ${esc(salary)}</p>` : '';
+  return layout(`<article><p style="color:#047857;font-weight:700">${esc(job.category === 'govt' ? 'সরকারি চাকরি' : 'চাকরি বিজ্ঞপ্তি')}</p><h1>${esc(job.title)}</h1><p><strong>চাকরির স্থান:</strong> বাংলাদেশ</p>${start}<p><strong>আবেদনের শেষ তারিখ:</strong> ${esc(formatDate(job.deadline))}</p>${pay}<p>${esc(summary)}</p><p><a href="${detailUrl(job)}" style="color:#065f46">বিস্তারিত বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন</a></p></article>`);
 }
 
 function noindexBody(title, message) {
@@ -134,9 +139,7 @@ function schemaForJobs() {
 function schemaForJob(job) {
   const canonical = detailUrl(job);
   const datePosted = job.publishedAt || job.createdAt;
-  const schemaAddress = job.location && Object.values(job.location).some(Boolean)
-    ? { '@type': 'PostalAddress', addressCountry: 'BD', ...job.location }
-    : undefined;
+  const schemaAddress = { '@type': 'PostalAddress', addressCountry: 'BD', ...(job.location || {}) };
   const schemaSalary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
     ? {
         '@type': 'MonetaryAmount',
@@ -160,7 +163,7 @@ function schemaForJob(job) {
     validThrough: job.deadline ? new Date(job.deadline).toISOString() : undefined,
     ...(job.employmentType ? { employmentType: job.employmentType } : {}),
     hiringOrganization: { '@type': 'Organization', name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ') },
-    ...(schemaAddress ? { jobLocation: { '@type': 'Place', address: schemaAddress } } : {}),
+    jobLocation: { '@type': 'Place', address: schemaAddress },
     ...(schemaSalary ? { baseSalary: schemaSalary } : {}),
   };
   return JSON.parse(JSON.stringify(schema));
