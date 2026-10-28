@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCached, setCached, precacheJob, getCachedWithSWR, prefetchJobDetail } from '../../services/cache';
@@ -14,6 +14,7 @@ import { fetchJobsList } from '../../services/jobsStore';
 const ITEMS_PER_PAGE = 20;
 
 export const JobsPage: React.FC = () => {
+  const location = useLocation();
   const [jobs, setJobs] = useState<JobCircular[]>(() => {
     const page1 = getCached<JobCircular[]>('jobs_page_1');
     if (page1 && page1.length > 0) {
@@ -33,6 +34,18 @@ export const JobsPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
 
   const ALL_JOBS_KEY = 'jobs_all';
+
+  // PublicLayout-এর মেনু একই /jobs route-এ শুধু query string বদলায়।
+  // তাই component remount না হলেও URL-এর category/search অনুযায়ী state sync করতে হবে।
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nextSearch = params.get('search') || '';
+    const nextCategory = params.get('category') || 'all';
+
+    setSearchTerm((current) => (current === nextSearch ? current : nextSearch));
+    setCategoryFilter((current) => (current === nextCategory ? current : nextCategory));
+    setCurrentPage(1);
+  }, [location.search]);
 
   // সব জব একবার লোড করে ক্যাশ করা হয়; ফিল্টার, সাজানো ও পেজিং ব্রাউজারে হয়
   const loadAllJobs = async (bypassCache: boolean): Promise<JobCircular[]> => {
