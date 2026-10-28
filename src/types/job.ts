@@ -16,6 +16,20 @@ export interface MediaSpec {
   maxKB: number;
 }
 
+export interface JobLocation {
+  addressLocality?: string;
+  addressRegion?: string;
+  streetAddress?: string;
+  postalCode?: string;
+}
+
+export interface JobSalary {
+  currency?: string;
+  minValue?: number;
+  maxValue?: number;
+  unitText?: string;
+}
+
 export interface JobCircular {
   id: string;
   title: string;
@@ -31,6 +45,8 @@ export interface JobCircular {
   applyLink: string;
   organizationName?: string;
   employmentType?: string;
+  location?: JobLocation;
+  baseSalary?: JobSalary;
   applyServiceEnabled: boolean;
   applicationFee: number;
   serviceCharge: number;

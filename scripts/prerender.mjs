@@ -134,6 +134,21 @@ function schemaForJobs() {
 function schemaForJob(job) {
   const canonical = detailUrl(job);
   const datePosted = job.publishedAt || job.createdAt;
+  const schemaAddress = job.location && Object.values(job.location).some(Boolean)
+    ? { '@type': 'PostalAddress', addressCountry: 'BD', ...job.location }
+    : undefined;
+  const schemaSalary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
+    ? {
+        '@type': 'MonetaryAmount',
+        currency: job.baseSalary.currency || 'BDT',
+        value: {
+          '@type': 'QuantitativeValue',
+          ...(job.baseSalary.minValue != null ? { minValue: job.baseSalary.minValue } : {}),
+          ...(job.baseSalary.maxValue != null ? { maxValue: job.baseSalary.maxValue } : {}),
+          unitText: job.baseSalary.unitText || 'MONTH',
+        },
+      }
+    : undefined;
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
@@ -145,7 +160,8 @@ function schemaForJob(job) {
     validThrough: job.deadline ? new Date(job.deadline).toISOString() : undefined,
     ...(job.employmentType ? { employmentType: job.employmentType } : {}),
     hiringOrganization: { '@type': 'Organization', name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ') },
-    jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressCountry: 'BD' } },
+    ...(schemaAddress ? { jobLocation: { '@type': 'Place', address: schemaAddress } } : {}),
+    ...(schemaSalary ? { baseSalary: schemaSalary } : {}),
   };
   return JSON.parse(JSON.stringify(schema));
 }

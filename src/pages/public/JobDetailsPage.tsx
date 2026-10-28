@@ -243,6 +243,26 @@ export const JobDetailsPage: React.FC = () => {
     .trim()
     .slice(0, 5000);
 
+  const schemaAddress = job.location && Object.values(job.location).some(Boolean)
+    ? {
+        '@type': 'PostalAddress',
+        addressCountry: 'BD',
+        ...job.location,
+      }
+    : undefined;
+  const schemaSalary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
+    ? {
+        '@type': 'MonetaryAmount',
+        currency: job.baseSalary.currency || 'BDT',
+        value: {
+          '@type': 'QuantitativeValue',
+          ...(job.baseSalary.minValue != null ? { minValue: job.baseSalary.minValue } : {}),
+          ...(job.baseSalary.maxValue != null ? { maxValue: job.baseSalary.maxValue } : {}),
+          unitText: job.baseSalary.unitText || 'MONTH',
+        },
+      }
+    : undefined;
+
   // Google JobPosting & BreadcrumbList JSON-LD Schemas (Safely stringified)
   const structuredData = {
     '@context': 'https://schema.org',
@@ -261,13 +281,8 @@ export const JobDetailsPage: React.FC = () => {
           name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ'),
           sameAs: job.applyLink || 'https://teletalk.com.bd',
         },
-        jobLocation: {
-          '@type': 'Place',
-          address: {
-            '@type': 'PostalAddress',
-            addressCountry: 'BD',
-          },
-        },
+        ...(schemaAddress ? { jobLocation: { '@type': 'Place', address: schemaAddress } } : {}),
+        ...(schemaSalary ? { baseSalary: schemaSalary } : {}),
       },
       {
         '@type': 'BreadcrumbList',
