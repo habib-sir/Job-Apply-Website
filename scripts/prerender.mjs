@@ -35,6 +35,7 @@ const formatDate = (value) => {
 const isPublished = (job) => job && job.status !== 'draft';
 const slugOf = (job) => String(job?.slug || job?.id || '').trim();
 const detailUrl = (job) => `${BASE}/jobs/${encodeURIComponent(slugOf(job))}`;
+const detailJsonUrl = (job) => `${R2}/jobs/detail/${encodeURIComponent(slugOf(job))}.json`;
 
 async function readJson(url, fallback) {
   try {
@@ -44,6 +45,12 @@ async function readJson(url, fallback) {
   } catch {
     return fallback;
   }
+}
+
+async function enrichJob(job) {
+  if (!job || !slugOf(job)) return job;
+  const detail = await readJson(detailJsonUrl(job), null);
+  return detail && typeof detail === 'object' ? { ...job, ...detail } : job;
 }
 
 function upsertTitle(html, title) {
@@ -136,19 +143,46 @@ function schemaForJobs() {
   return { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/jobs`, inLanguage: 'bn-BD' };
 }
 
+function inferSalaryFromContent(job) {
+  if (job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)) return job.baseSalary;
+  const digits = (value) => String(value).replace(/[০-৯]/g, (d) => '০১২৩৪৫৬৭৮৯'.indexOf(d)).replace(/,/g, '');
+  const text = stripHtml(job.content || '');
+  const values = [];
+  for (const match of text.matchAll(/(?:বেতন|মাসিক|pay scale|salary)[^।\n]{0,500}/gi)) {
+    for (const number of match[0].matchAll(/(?:[০-৯\d]{1,3},(?:[০-৯\d]{2,3},)?[০-৯\d]{3}|[০-৯\d]{4,})/g)) {
+      const value = Number(digits(number[0]));
+      if (value >= 1000 && value <= 10000000) values.push(value);
+    }
+  }
+  const unique = [...new Set(values)].sort((a, b) => a - b);
+  if (!unique.length) return undefined;
+  return { currency: 'BDT', minValue: unique[0], maxValue: unique[unique.length - 1], unitText: 'MONTH' };
+}
+
+function isGovernmentJob(job) {
+  return job.category === 'govt' && !/(ngo|এনজিও|ফাউন্ডেশন|পিকেএসএফ|pksf)/i.test(String(job.title || ''));
+}
+
+function organizationForJob(job) {
+  if (job.organizationName) return job.organizationName;
+  if (/(পিকেএসএফ|pksf)/i.test(String(job.title || ''))) return 'পল্লী কর্ম-সহায়ক ফাউন্ডেশন (PKSF)';
+  return isGovernmentJob(job) ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ';
+}
+
 function schemaForJob(job) {
   const canonical = detailUrl(job);
   const datePosted = job.publishedAt || job.createdAt;
+  const salary = inferSalaryFromContent(job);
   const schemaAddress = { '@type': 'PostalAddress', addressCountry: 'BD', ...(job.location || {}) };
-  const schemaSalary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
+  const schemaSalary = salary && (salary.minValue != null || salary.maxValue != null)
     ? {
         '@type': 'MonetaryAmount',
-        currency: job.baseSalary.currency || 'BDT',
+        currency: salary.currency || 'BDT',
         value: {
           '@type': 'QuantitativeValue',
-          ...(job.baseSalary.minValue != null ? { minValue: job.baseSalary.minValue } : {}),
-          ...(job.baseSalary.maxValue != null ? { maxValue: job.baseSalary.maxValue } : {}),
-          unitText: job.baseSalary.unitText || 'MONTH',
+          ...(salary.minValue != null ? { minValue: salary.minValue } : {}),
+          ...(salary.maxValue != null ? { maxValue: salary.maxValue } : {}),
+          unitText: salary.unitText || 'MONTH',
         },
       }
     : undefined;
@@ -162,7 +196,7 @@ function schemaForJob(job) {
     datePosted: datePosted ? new Date(datePosted).toISOString() : undefined,
     validThrough: job.deadline ? new Date(job.deadline).toISOString() : undefined,
     ...(job.employmentType ? { employmentType: job.employmentType } : {}),
-    hiringOrganization: { '@type': 'Organization', name: job.organizationName || (job.category === 'govt' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : 'নিয়োগকারী কর্তৃপক্ষ') },
+    hiringOrganization: { '@type': 'Organization', name: organizationForJob(job) },
     jobLocation: { '@type': 'Place', address: schemaAddress },
     ...(schemaSalary ? { baseSalary: schemaSalary } : {}),
   };
@@ -182,16 +216,17 @@ async function main() {
   const remote = await readJson(`${R2}/jobs.json`, local);
   const jobs = (Array.isArray(remote) ? remote : local).filter(isPublished).filter((job) => slugOf(job));
   const unique = [...new Map(jobs.map((job) => [slugOf(job), job])).values()];
+  const enriched = await Promise.all(unique.map(enrichJob));
 
   const homeDescription = 'বাংলাদেশের সরকারি চাকরির খবর, নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা এবং আবেদনের শেষ তারিখ।';
-  writeRoute('.', withPageMetadata(template, { title: 'সরকারি চাকরি ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: homeDescription, canonical: `${BASE}/`, schema: schemaForHome(), body: homepageBody(unique) }));
-  writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: `${BASE}/jobs`, schema: schemaForJobs(), body: jobsBody(unique) }));
-  const governmentJobs = unique.filter((job) => job.category === 'govt');
+  writeRoute('.', withPageMetadata(template, { title: 'সরকারি চাকরি ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: homeDescription, canonical: `${BASE}/`, schema: schemaForHome(), body: homepageBody(enriched) }));
+  writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: `${BASE}/jobs`, schema: schemaForJobs(), body: jobsBody(enriched) }));
+  const governmentJobs = enriched.filter((job) => job.category === 'govt');
   writeRoute('sorkari-chakri', withPageMetadata(template, { title: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/sorkari-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/sorkari-chakri`, inLanguage: 'bn-BD' }, body: governmentJobsBody(governmentJobs) }));
   writeRoute('login', withPageMetadata(template, { title: 'লগইন | BD Job Apply', description: 'BD Job Apply অ্যাকাউন্টে লগইন করুন।', canonical: `${BASE}/login`, noindex: true, body: noindexBody('ইউজার লগইন', 'অ্যাকাউন্টে প্রবেশ করতে লগইন করুন।') }));
   writeRoute('register', withPageMetadata(template, { title: 'রেজিস্ট্রেশন | BD Job Apply', description: 'BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।', canonical: `${BASE}/register`, noindex: true, body: noindexBody('নতুন অ্যাকাউন্ট তৈরি', 'দ্রুত চাকরির আবেদনের জন্য নিবন্ধন করুন।') }));
 
-  for (const job of unique) {
+  for (const job of enriched) {
     if (Buffer.byteLength(slugOf(job), 'utf8') > MAX_ROUTE_SEGMENT_LENGTH) {
       console.warn(`Prerender: slug too long, SPA fallback রাখা হলো: ${slugOf(job).slice(0, 80)}…`);
       continue;
@@ -203,7 +238,7 @@ async function main() {
 
   const notFound = withPageMetadata(template, { title: 'পৃষ্ঠা পাওয়া যায়নি | BD Job Apply', description: 'আপনি যে পৃষ্ঠাটি খুঁজছেন তা পাওয়া যায়নি।', canonical: `${BASE}/404.html`, noindex: true, body: noindexBody('৪০৪ — পৃষ্ঠা পাওয়া যায়নি', 'লিংকটি ভুল অথবা বিজ্ঞপ্তিটি সরানো হয়েছে।') });
   fs.writeFileSync(path.join(DIST, '404.html'), notFound);
-  console.log(`Prerendered homepage, jobs list, auth pages, 404, and ${unique.length} job detail pages.`);
+  console.log(`Prerendered homepage, jobs list, auth pages, 404, and ${enriched.length} job detail pages.`);
 }
 
 main().catch((error) => {
