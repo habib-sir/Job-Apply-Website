@@ -6,6 +6,9 @@ export interface JobPostItem {
   count: number;
   district: 'ALL' | string;
   districts?: string[]; // Multiple allowed districts support
+  salaryGrade?: string;
+  salaryMin?: number;
+  salaryMax?: number;
   applicationFee?: number;
   serviceCharge?: number;
 }

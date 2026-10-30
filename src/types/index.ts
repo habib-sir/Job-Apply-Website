@@ -13,6 +13,7 @@ export interface AdminAccount {
 
 export * from './profile';
 export * from './job';
+export * from './salaryScale';
 export * from './application';
 export * from './payment';
 export * from './notification';

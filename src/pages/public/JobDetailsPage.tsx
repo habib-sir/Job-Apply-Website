@@ -448,11 +448,12 @@ export const JobDetailsPage: React.FC = () => {
             </h3>
 
             <div className="overflow-x-auto touch-pan-x">
-              <table className="w-full min-w-[500px] text-xs text-left bg-white rounded-lg border border-gray-200">
+              <table className="w-full min-w-[640px] text-xs text-left bg-white rounded-lg border border-gray-200">
                 <thead className="bg-gray-100 text-gray-700">
                   <tr>
                     <th className="p-2.5">পদের নাম</th>
                     <th className="p-2.5">পদসংখ্যা</th>
+                    <th className="p-2.5">বেতন গ্রেড ও স্কেল</th>
                     <th className="p-2.5">আবেদনের অনুমোদিত জেলা</th>
                     <th className="p-2.5 text-right">আবেদন ফি (টাকা)</th>
                   </tr>
@@ -475,6 +476,11 @@ export const JobDetailsPage: React.FC = () => {
                       <tr key={idx}>
                         <td className="p-2.5 font-bold text-gray-800">{p.name}</td>
                         <td className="p-2.5 text-gray-600">{p.count} জন</td>
+                        <td className="p-2.5 text-emerald-800 font-semibold">
+                          {p.salaryGrade || p.salaryMin != null || p.salaryMax != null
+                            ? `${p.salaryGrade ? `${p.salaryGrade}: ` : ''}${p.salaryMin != null ? Number(p.salaryMin).toLocaleString('bn-BD') : '—'}–${p.salaryMax != null ? Number(p.salaryMax).toLocaleString('bn-BD') : '—'} টাকা`
+                            : 'বিজ্ঞপ্তি দেখুন'}
+                        </td>
                         <td className="p-2.5 text-emerald-700 font-medium">
                           {p.district === 'ALL' || (Array.isArray(p.districts) && p.districts.includes('ALL'))
                             ? 'সারাদেশ (সকল জেলা)'

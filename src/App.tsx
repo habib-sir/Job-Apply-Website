@@ -52,6 +52,7 @@ const AdminJobFormPage = lazy(() => import('./pages/admin/AdminJobFormPage').the
 const AdminExamsPage = lazy(() => import('./pages/admin/AdminExamsPage').then((m) => ({ default: m.AdminExamsPage })));
 const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplicationsPage').then((m) => ({ default: m.AdminApplicationsPage })));
 const AdminPaymentSettingsPage = lazy(() => import('./pages/admin/AdminPaymentSettingsPage').then((m) => ({ default: m.AdminPaymentSettingsPage })));
+const AdminSalaryScalePage = lazy(() => import('./pages/admin/AdminSalaryScalePage').then((m) => ({ default: m.AdminSalaryScalePage })));
 const AdminExportPage = lazy(() => import('./pages/admin/AdminExportPage').then((m) => ({ default: m.AdminExportPage })));
 const AdminGoogleDrivePage = lazy(() => import('./pages/admin/AdminGoogleDrivePage').then((m) => ({ default: m.AdminGoogleDrivePage })));
 const AdminUrlShortenerPage = lazy(() => import('./pages/admin/AdminUrlShortenerPage').then((m) => ({ default: m.AdminUrlShortenerPage })));
@@ -139,6 +140,7 @@ export default function App() {
                     <Route path="prep" element={<AdminPrepPage />} />
                     <Route path="applications/:step" element={<AdminApplicationsPage />} />
                     <Route path="settings/payment" element={<AdminPaymentSettingsPage />} />
+                    <Route path="settings/salary-scale" element={<AdminSalaryScalePage />} />
                     <Route path="settings/google-sheets" element={<AdminGoogleSheetsPage />} />
                     <Route path="google-sheets" element={<AdminGoogleSheetsPage />} />
                     <Route path="storage" element={<AdminGoogleDrivePage />} />

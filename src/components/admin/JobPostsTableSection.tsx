@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { JobPostItem } from '../../types';
+import { JobPostItem, SalaryScaleOption, formatSalary } from '../../types';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { BD_DISTRICTS } from '../../data/districts';
@@ -10,6 +10,7 @@ interface Props {
   onAddPost: () => void;
   onUpdatePost: (idx: number, field: keyof JobPostItem, val: any) => void;
   onRemovePost: (idx: number) => void;
+  salaryScales: SalaryScaleOption[];
 }
 
 export const JobPostsTableSection: React.FC<Props> = ({
@@ -17,6 +18,7 @@ export const JobPostsTableSection: React.FC<Props> = ({
   onAddPost,
   onUpdatePost,
   onRemovePost,
+  salaryScales,
 }) => {
   // Track text edit mode per post index
   const [textModeMap, setTextModeMap] = useState<Record<number, boolean>>({});
@@ -264,7 +266,35 @@ export const JobPostsTableSection: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Row 3: Per-post fee configuration */}
+              {/* Row 3: Per-post salary scale */}
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 space-y-2">
+                <label className="block text-[11px] font-bold text-emerald-900">এই পদের বেতন গ্রেড ও নির্ধারিত scale</label>
+                <select
+                  value={post.salaryGrade || ''}
+                  onChange={(e) => {
+                    const selected = salaryScales.find((scale) => scale.grade === e.target.value);
+                    onUpdatePost(idx, 'salaryGrade', selected?.grade || undefined);
+                    onUpdatePost(idx, 'salaryMin', selected?.minValue);
+                    onUpdatePost(idx, 'salaryMax', selected?.maxValue);
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="">বেতন গ্রেড নির্বাচন করুন...</option>
+                  {salaryScales.map((scale) => (
+                    <option key={scale.grade} value={scale.grade}>
+                      {scale.grade}{scale.minValue != null || scale.maxValue != null ? ` — ${formatSalary(scale.minValue)}–${formatSalary(scale.maxValue)} টাকা` : ' — scale update বাকি'}
+                    </option>
+                  ))}
+                </select>
+                {(post.salaryMin != null || post.salaryMax != null) && (
+                  <p className="text-[11px] text-emerald-800 font-semibold">নির্ধারিত scale: {formatSalary(post.salaryMin)}–{formatSalary(post.salaryMax)} টাকা মাসিক</p>
+                )}
+                {post.salaryGrade && post.salaryMin == null && post.salaryMax == null && (
+                  <p className="text-[11px] text-amber-700">এই grade-এর min/max এখনো Admin → বেতন গ্রেড ও স্কেল থেকে আপডেট করা হয়নি।</p>
+                )}
+              </div>
+
+              {/* Row 4: Per-post fee configuration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-gray-200/60">
                 <div>
                   <label className="block text-[11px] font-medium text-gray-600 mb-0.5">

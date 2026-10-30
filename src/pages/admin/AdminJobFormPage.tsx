@@ -10,8 +10,8 @@ import {
 } from '../../services/files';
 import { invalidateCache } from '../../services/cache';
 import { auth } from '../../services/firebase';
-import { WORKER_URL, fetchJobsList, saveJobToWorker, R2_BASE } from '../../services/jobsStore';
-import { JobCircular, JobCategory, JobStatus, JobPostItem } from '../../types';
+import { WORKER_URL, fetchJobsList, saveJobToWorker, R2_BASE, fetchSalaryScaleConfig } from '../../services/jobsStore';
+import { JobCircular, JobCategory, JobStatus, JobPostItem, SalaryScaleOption } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Button } from '../../components/common/Button';
@@ -86,6 +86,7 @@ export const AdminJobFormPage: React.FC = () => {
   const [uploadingMultiImages, setUploadingMultiImages] = useState(false);
   const [multiUploadProgress, setMultiUploadProgress] = useState('');
   const [posts, setPosts] = useState<JobPostItem[]>([{ name: '', count: 1, district: 'ALL' }]);
+  const [salaryScales, setSalaryScales] = useState<SalaryScaleOption[]>([]);
 
   // SEO & Social Optimization States
   const [seoTitle, setSeoTitle] = useState('');
@@ -93,6 +94,10 @@ export const AdminJobFormPage: React.FC = () => {
   const [focusKeyword, setFocusKeyword] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    fetchSalaryScaleConfig().then((config) => setSalaryScales(config.scales));
+  }, []);
 
   // AI Autofill States
   const [aiAutofillOpen, setAiAutofillOpen] = useState(true);
@@ -141,6 +146,9 @@ export const AdminJobFormPage: React.FC = () => {
         setSalaryGrade(data.baseSalary.grade || '');
         setSalaryMin(data.baseSalary.minValue ?? '');
         setSalaryMax(data.baseSalary.maxValue ?? '');
+        setPosts((current) => current.map((post, index) => index === 0
+          ? { ...post, salaryGrade: data.baseSalary.grade || undefined, salaryMin: data.baseSalary.minValue, salaryMax: data.baseSalary.maxValue }
+          : post));
       }
       if (data.applyLink) setApplyLink(data.applyLink);
       if (data.circularLink) setCircularLink(data.circularLink);
@@ -275,7 +283,18 @@ export const AdminJobFormPage: React.FC = () => {
           if (Array.isArray(data.circularImages)) {
             setCircularImages(data.circularImages);
           }
-          setPosts(Array.isArray(data.posts) && data.posts.length > 0 ? data.posts : [{ name: '', count: 1, district: 'ALL' }]);
+          const loadedPosts: JobPostItem[] = Array.isArray(data.posts) && data.posts.length > 0
+            ? data.posts
+            : [{ name: '', count: 1, district: 'ALL' }];
+          if (data.baseSalary && !loadedPosts.some((post) => post.salaryGrade || post.salaryMin != null || post.salaryMax != null)) {
+            loadedPosts[0] = {
+              ...loadedPosts[0],
+              salaryGrade: data.baseSalary.grade,
+              salaryMin: data.baseSalary.minValue,
+              salaryMax: data.baseSalary.maxValue,
+            };
+          }
+          setPosts(loadedPosts);
 
           // Load SEO fields
           setSeoTitle(data.seoTitle || '');
@@ -564,6 +583,9 @@ export const AdminJobFormPage: React.FC = () => {
             count: Number(p.count) || 1,
             district: p.district || 'ALL',
           };
+          if (p.salaryGrade) item.salaryGrade = p.salaryGrade;
+          if (p.salaryMin != null) item.salaryMin = Number(p.salaryMin);
+          if (p.salaryMax != null) item.salaryMax = Number(p.salaryMax);
           if (Array.isArray(p.districts) && p.districts.length > 0) {
             item.districts = p.districts;
           }
@@ -583,6 +605,10 @@ export const AdminJobFormPage: React.FC = () => {
       const pubDate = status === 'scheduled' && publishedAt ? new Date(publishedAt) : new Date();
       const nowIso = new Date().toISOString();
 
+      const postSalaries = finalPosts.filter((post: any) => post.salaryMin != null || post.salaryMax != null);
+      const salaryGrades = [...new Set(finalPosts.map((post: any) => post.salaryGrade).filter(Boolean))];
+      const allSalaryValues = postSalaries.flatMap((post: any) => [post.salaryMin, post.salaryMax]).filter((value: any) => value != null).map(Number);
+
       const jobData: Record<string, any> = {
         id: jobId,
         title: effectiveTitle,
@@ -597,13 +623,13 @@ export const AdminJobFormPage: React.FC = () => {
         applyServiceEnabled: Boolean(applyServiceEnabled),
         applicationFee: Number(applicationFee) || 0,
         serviceCharge: Number(serviceCharge) || 0,
-        ...(salaryGrade.trim() || salaryMin !== '' || salaryMax !== ''
+        ...(postSalaries.length > 0 || salaryGrade.trim() || salaryMin !== '' || salaryMax !== ''
           ? {
               baseSalary: {
-                ...(salaryGrade.trim() ? { grade: salaryGrade.trim() } : {}),
+                ...(salaryGrades.length === 1 ? { grade: salaryGrades[0] } : salaryGrade.trim() ? { grade: salaryGrade.trim() } : {}),
                 currency: 'BDT',
-                ...(salaryMin !== '' ? { minValue: Number(salaryMin) } : {}),
-                ...(salaryMax !== '' ? { maxValue: Number(salaryMax) } : {}),
+                ...(postSalaries.length > 0 && allSalaryValues.length > 0 ? { minValue: Math.min(...allSalaryValues) } : salaryMin !== '' ? { minValue: Number(salaryMin) } : {}),
+                ...(postSalaries.length > 0 && allSalaryValues.length > 0 ? { maxValue: Math.max(...allSalaryValues) } : salaryMax !== '' ? { maxValue: Number(salaryMax) } : {}),
                 unitText: 'MONTH',
               },
             }
@@ -845,10 +871,8 @@ export const AdminJobFormPage: React.FC = () => {
           <Input label="আবেদনের শেষ তারিখ ও সময়" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} requiredStar />
           <Input label="অফিসিয়াল Teletalk আবেদন লিংক" placeholder="http://br.teletalk.com.bd" value={applyLink} onChange={(e) => setApplyLink(e.target.value)} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-          <Input label="বেতন গ্রেড" placeholder="যেমন: ১৬তম গ্রেড" value={salaryGrade} onChange={(e) => setSalaryGrade(e.target.value)} />
-          <Input label="বেতন সর্বনিম্ন (৳)" type="number" placeholder="যেমন: ২১৯০০" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value === '' ? '' : Number(e.target.value))} />
-          <Input label="বেতন সর্বোচ্চ (৳)" type="number" placeholder="যেমন: ৫২৯০০" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value === '' ? '' : Number(e.target.value))} />
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
+          বেতন এখন প্রতিটি পদের জন্য আলাদাভাবে নির্বাচন করতে হবে। নিচের “পদের তালিকা” অংশে grade dropdown থেকে নির্বাচন করলে নির্ধারিত সর্বনিম্ন–সর্বোচ্চ scale স্বয়ংক্রিয়ভাবে বসবে। Scale আপডেট করতে Admin → বেতন গ্রেড ও স্কেল ব্যবহার করুন।
         </div>
       </div>
 
@@ -897,6 +921,7 @@ export const AdminJobFormPage: React.FC = () => {
 
       <JobPostsTableSection
         posts={posts}
+        salaryScales={salaryScales}
         onAddPost={() => setPosts([...posts, { name: '', count: 1, district: 'ALL' }])}
         onUpdatePost={(idx, field, val) => {
           const u = [...posts];

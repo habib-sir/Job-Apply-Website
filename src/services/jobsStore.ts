@@ -1,3 +1,5 @@
+import { DEFAULT_SALARY_SCALE_CONFIG, SalaryScaleConfig } from '../types';
+
 export const R2_BASE = 'https://files.bdjobapply.site';
 export const WORKER_URL = 'https://bdjob-worker.masterboom2040.workers.dev';
 const TOKEN_KEY = 'admin_worker_token';
@@ -173,6 +175,19 @@ export async function putPublicJson(name: string, data: unknown): Promise<void> 
   if (!res.ok) {
     throw new Error(`সংরক্ষণ ব্যর্থ (HTTP ${res.status})`);
   }
+}
+
+export async function fetchSalaryScaleConfig(): Promise<SalaryScaleConfig> {
+  try {
+    const res = await fetch(`${R2_BASE}/salary-scales.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.scales)) return { ...DEFAULT_SALARY_SCALE_CONFIG, ...data };
+    }
+  } catch {
+    // Use grade-only fallback until the admin config is saved.
+  }
+  return DEFAULT_SALARY_SCALE_CONFIG;
 }
 
 /** পাবলিক ছবি Worker দিয়ে R2-তে আপলোড; পাবলিক URL ফেরত দেয় */
