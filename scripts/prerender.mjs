@@ -34,7 +34,11 @@ const formatDate = (value) => {
 
 const isPublished = (job) => job && job.status !== 'draft';
 const slugOf = (job) => String(job?.slug || job?.id || '').trim();
-const detailUrl = (job) => `${BASE}/jobs/${encodeURIComponent(slugOf(job))}`;
+const publicSlugOf = (job) => {
+  const slug = slugOf(job);
+  return Buffer.byteLength(slug, 'utf8') <= 160 ? slug : String(job?.id || slug).trim();
+};
+const detailUrl = (job, routeSlug = publicSlugOf(job)) => `${BASE}/jobs/${encodeURIComponent(routeSlug)}`;
 const detailJsonUrl = (job) => `${R2}/jobs/detail/${encodeURIComponent(slugOf(job))}.json`;
 
 async function readJson(url, fallback) {
@@ -101,7 +105,7 @@ function withPageMetadata(template, { title, description, canonical, type = 'web
 
 function layout(content) {
   return `<main lang="bn" style="max-width:960px;margin:0 auto;padding:32px 16px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#111827">
-    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/sorkari-chakri" style="color:#065f46">সরকারি চাকরি</a></nav></header>
+    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/sorkari-chakri" style="margin-right:16px;color:#065f46">সরকারি চাকরি</a><a href="${BASE}/private-chakri" style="margin-right:16px;color:#065f46">বেসরকারি চাকরি</a><a href="${BASE}/ngo-chakri" style="color:#065f46">এনজিও চাকরি</a></nav></header>
     ${content}
   </main>`;
 }
@@ -121,6 +125,11 @@ function governmentJobsBody(jobs) {
   return layout(`<h1>সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি</h1><p>বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি এবং আবেদনের শেষ তারিখ দেখুন।</p><ul>${items}</ul>`);
 }
 
+function categoryJobsBody(jobs, heading, description, label) {
+  const items = jobs.map((job) => `<li style="margin:12px 0"><a href="${detailUrl(job)}" style="color:#065f46;font-weight:700">${esc(job.title)}</a><span> — ${esc(label)}, শেষ তারিখ: ${esc(formatDate(job.deadline))}</span></li>`).join('');
+  return layout(`<h1>${esc(heading)}</h1><p>${esc(description)}</p><ul>${items}</ul>`);
+}
+
 function detailBody(job) {
   const summary = stripHtml(job.content || '').slice(0, 900);
   const salary = job.baseSalary && (job.baseSalary.minValue != null || job.baseSalary.maxValue != null)
@@ -133,6 +142,10 @@ function detailBody(job) {
 
 function noindexBody(title, message) {
   return layout(`<h1>${esc(title)}</h1><p>${esc(message)}</p>`);
+}
+
+function redirectBody(target) {
+  return `<main lang="bn" style="font-family:system-ui;padding:32px 16px"><h1>পৃষ্ঠাটি নতুন ঠিকানায় সরানো হয়েছে</h1><p><a href="${esc(target)}">নতুন ঠিকানায় যেতে এখানে চাপুন</a></p><script>location.replace(${JSON.stringify(target)})</script></main>`;
 }
 
 function schemaForHome() {
@@ -223,18 +236,31 @@ async function main() {
   writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: `${BASE}/jobs`, schema: schemaForJobs(), body: jobsBody(enriched) }));
   const governmentJobs = enriched.filter((job) => job.category === 'govt');
   writeRoute('sorkari-chakri', withPageMetadata(template, { title: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/sorkari-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/sorkari-chakri`, inLanguage: 'bn-BD' }, body: governmentJobsBody(governmentJobs) }));
+  const privateJobs = enriched.filter((job) => job.category === 'private');
+  const ngoJobs = enriched.filter((job) => job.category === 'ngo' || job.category === 'brac');
+  writeRoute('private-chakri', withPageMetadata(template, { title: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, আবেদন পদ্ধতি ও শেষ তারিখ খুঁজুন।', canonical: `${BASE}/private-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/private-chakri`, inLanguage: 'bn-BD' }, body: categoryJobsBody(privateJobs, 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন ও আবেদনের শেষ তারিখ দেখুন।', 'বেসরকারি চাকরি') }));
+  writeRoute('ngo-chakri', withPageMetadata(template, { title: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/ngo-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/ngo-chakri`, inLanguage: 'bn-BD' }, body: categoryJobsBody(ngoJobs, 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', 'এনজিও চাকরি') }));
   writeRoute('login', withPageMetadata(template, { title: 'লগইন | BD Job Apply', description: 'BD Job Apply অ্যাকাউন্টে লগইন করুন।', canonical: `${BASE}/login`, noindex: true, body: noindexBody('ইউজার লগইন', 'অ্যাকাউন্টে প্রবেশ করতে লগইন করুন।') }));
   writeRoute('register', withPageMetadata(template, { title: 'রেজিস্ট্রেশন | BD Job Apply', description: 'BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।', canonical: `${BASE}/register`, noindex: true, body: noindexBody('নতুন অ্যাকাউন্ট তৈরি', 'দ্রুত চাকরির আবেদনের জন্য নিবন্ধন করুন।') }));
 
+  const redirects = [];
   for (const job of enriched) {
-    if (Buffer.byteLength(slugOf(job), 'utf8') > MAX_ROUTE_SEGMENT_LENGTH) {
-      console.warn(`Prerender: slug too long, SPA fallback রাখা হলো: ${slugOf(job).slice(0, 80)}…`);
-      continue;
-    }
+    const legacySlug = slugOf(job);
+    const routeSlug = publicSlugOf(job);
     const title = `${job.title} | BDJobApply.site`;
-    const description = `${job.title}। সরকারি চাকরির নিয়োগ বিজ্ঞপ্তি, যোগ্যতা ও আবেদনের শেষ তারিখ: ${formatDate(job.deadline)}।`;
-    writeRoute(path.join('jobs', slugOf(job)), withPageMetadata(template, { title, description, canonical: detailUrl(job), type: 'article', schema: schemaForJob(job), body: detailBody(job) }));
+    const description = `${job.title}। চাকরির নিয়োগ বিজ্ঞপ্তি, যোগ্যতা ও আবেদনের শেষ তারিখ: ${formatDate(job.deadline)}।`;
+    const canonical = detailUrl(job, routeSlug);
+    const schema = schemaForJob(job);
+    schema.url = canonical;
+    schema['@id'] = `${canonical}#job`;
+    writeRoute(path.join('jobs', routeSlug), withPageMetadata(template, { title, description, canonical, type: 'article', schema, body: detailBody(job) }));
+    if (legacySlug !== routeSlug) redirects.push(`/jobs/${encodeURIComponent(legacySlug)} ${canonical.replace(BASE, '')} 301`);
+    if (legacySlug !== routeSlug && Buffer.byteLength(legacySlug, 'utf8') <= MAX_ROUTE_SEGMENT_LENGTH) {
+      writeRoute(path.join('jobs', legacySlug), withPageMetadata(template, { title: 'নতুন ঠিকানায় সরানো হয়েছে | BD Job Apply', description: 'এই চাকরির বিজ্ঞপ্তির নতুন ঠিকানা ব্যবহার করুন।', canonical, noindex: true, body: redirectBody(canonical) }));
+    }
   }
+
+  fs.writeFileSync(path.join(DIST, '_redirects'), `${redirects.join('\n')}${redirects.length ? '\n' : ''}`);
 
   const notFound = withPageMetadata(template, { title: 'পৃষ্ঠা পাওয়া যায়নি | BD Job Apply', description: 'আপনি যে পৃষ্ঠাটি খুঁজছেন তা পাওয়া যায়নি।', canonical: `${BASE}/404.html`, noindex: true, body: noindexBody('৪০৪ — পৃষ্ঠা পাওয়া যায়নি', 'লিংকটি ভুল অথবা বিজ্ঞপ্তিটি সরানো হয়েছে।') });
   fs.writeFileSync(path.join(DIST, '404.html'), notFound);

@@ -38,6 +38,11 @@ const dateOnly = (v, fallback = today) => {
 };
 
 const jobUrl = (slug) => `${BASE}/jobs/${encodeURIComponent(slug)}`;
+const publicJobSlug = (slug, id = '') => {
+  const value = String(slug || '').trim();
+  if (!value) return String(id || '').trim();
+  return Buffer.byteLength(value, 'utf8') <= 160 ? value : String(id || value).trim();
+};
 
 function urlsetXml(urls) {
   const body = urls
@@ -90,6 +95,8 @@ async function generateSitemaps() {
     { loc: `${BASE}/`, priority: '1.0', changefreq: 'hourly', lastmod: today },
     { loc: `${BASE}/jobs`, priority: '0.9', changefreq: 'hourly', lastmod: today },
     { loc: `${BASE}/sorkari-chakri`, priority: '0.95', changefreq: 'hourly', lastmod: today },
+    { loc: `${BASE}/private-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: `${BASE}/ngo-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
   ];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-static.xml'), urlsetXml(staticUrls));
   children.push({ loc: `${BASE}/sitemap-static.xml`, lastmod: today });
@@ -100,7 +107,7 @@ async function generateSitemaps() {
     .filter((j) => j && j.status !== 'draft')
     .filter((j) => j.slug || j.id)
     .map((j) => ({
-      loc: jobUrl(j.slug || j.id),
+      loc: jobUrl(publicJobSlug(j.slug, j.id)),
       priority: '0.8',
       changefreq: 'daily',
       lastmod: dateOnly(j.updatedAt || j.publishedAt, today),
@@ -126,7 +133,7 @@ async function generateSitemaps() {
     for (const month of months) {
       const list = byMonth.get(month);
       const urls = list.map((e) => ({
-        loc: jobUrl(e.slug),
+        loc: jobUrl(publicJobSlug(e.slug, e.id)),
         priority: '0.5',
         changefreq: 'monthly',
         lastmod: dateOnly(e.deadline, today),

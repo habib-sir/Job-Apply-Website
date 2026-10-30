@@ -14,10 +14,10 @@ import { PublicLayout } from './layouts/PublicLayout';
 
 
 
-// Core Public Pages (Eagerly loaded for bulletproof instant mobile landing & 0ms navigation)
+// Only the homepage stays eager; detail/auth pages are deferred from the mobile landing bundle.
 import { HomePage } from './pages/public/HomePage';
-import { JobDetailsPage } from './pages/public/JobDetailsPage';
-import { LoginPage } from './pages/public/LoginPage';
+const JobDetailsPage = lazy(() => import('./pages/public/JobDetailsPage').then((m) => ({ default: m.JobDetailsPage })));
+const LoginPage = lazy(() => import('./pages/public/LoginPage').then((m) => ({ default: m.LoginPage })));
 
 // Layouts ও রেজিস্ট্রেশন লেজি: Firebase-সংশ্লিষ্ট অংশ হোম পাতায় আগে লোড হবে না
 const UserLayout = lazy(() => import('./layouts/UserLayout').then((m) => ({ default: m.UserLayout })));
@@ -84,6 +84,8 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/jobs" element={<JobsPage />} />
                     <Route path="/sorkari-chakri" element={<JobsPage />} />
+                    <Route path="/private-chakri" element={<JobsPage />} />
+                    <Route path="/ngo-chakri" element={<JobsPage />} />
                     <Route path="/jobs/:slug" element={<JobDetailsPage />} />
                     <Route path="/how-to-apply" element={<HowToApplyPage />} />
                     <Route path="/about" element={<AboutPage />} />

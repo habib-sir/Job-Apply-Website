@@ -10,12 +10,25 @@ import { sortJobsByDeadline } from '../../utils/jobSort';
 import { Spinner } from '../../components/common/Spinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { fetchJobsList } from '../../services/jobsStore';
+import { getPublicJobSlug } from '../../utils/slugify';
 
 const ITEMS_PER_PAGE = 20;
 
 export const JobsPage: React.FC = () => {
   const location = useLocation();
   const isGovernmentLanding = location.pathname === '/sorkari-chakri';
+  const isPrivateLanding = location.pathname === '/private-chakri';
+  const isNgoLanding = location.pathname === '/ngo-chakri';
+  const landingCategory = isGovernmentLanding ? 'govt' : isPrivateLanding ? 'private' : isNgoLanding ? 'ngo' : 'all';
+  const landingPath = isGovernmentLanding ? '/sorkari-chakri' : isPrivateLanding ? '/private-chakri' : isNgoLanding ? '/ngo-chakri' : '/jobs';
+  const landingTitle = isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬' : isPrivateLanding ? 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬' : isNgoLanding ? 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬' : 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬';
+  const landingDescription = isGovernmentLanding
+    ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।'
+    : isPrivateLanding
+      ? 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, আবেদন পদ্ধতি ও শেষ তারিখ খুঁজুন।'
+      : isNgoLanding
+        ? 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।'
+        : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।';
   const [jobs, setJobs] = useState<JobCircular[]>(() => {
     const page1 = getCached<JobCircular[]>('jobs_page_1');
     if (page1 && page1.length > 0) {
@@ -29,7 +42,7 @@ export const JobsPage: React.FC = () => {
     return new URLSearchParams(window.location.search).get('search') || '';
   });
   const [categoryFilter, setCategoryFilter] = useState<string>(() => {
-    return new URLSearchParams(window.location.search).get('category') || (isGovernmentLanding ? 'govt' : 'all');
+    return new URLSearchParams(window.location.search).get('category') || landingCategory;
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -41,12 +54,12 @@ export const JobsPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const nextSearch = params.get('search') || '';
-    const nextCategory = params.get('category') || (isGovernmentLanding ? 'govt' : 'all');
+    const nextCategory = params.get('category') || landingCategory;
 
     setSearchTerm((current) => (current === nextSearch ? current : nextSearch));
     setCategoryFilter((current) => (current === nextCategory ? current : nextCategory));
     setCurrentPage(1);
-  }, [location.pathname, location.search, isGovernmentLanding]);
+  }, [location.pathname, location.search, landingCategory]);
 
   // সব জব একবার লোড করে ক্যাশ করা হয়; ফিল্টার, সাজানো ও পেজিং ব্রাউজারে হয়
   const loadAllJobs = async (bypassCache: boolean): Promise<JobCircular[]> => {
@@ -141,34 +154,34 @@ export const JobsPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <Helmet>
-        <title>{isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'}</title>
+        <title>{landingTitle} | BDJobApply.site</title>
         <meta
           name="description"
-          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে নির্ভুল টেলিটক আবেদন করুন।'}
+          content={landingDescription}
         />
         <meta
           name="keywords"
-          content="সরকারি চাকরির খবর, চাকরির খবর ২০২৬, bd job circular, teletalk job apply, সরকারি নিয়োগ বিজ্ঞপ্তি, bdjobapply"
+          content={`${isPrivateLanding ? 'বেসরকারি চাকরি, private job circular' : isNgoLanding ? 'এনজিও চাকরি, NGO job circular' : 'সরকারি চাকরির খবর, সরকারি নিয়োগ বিজ্ঞপ্তি'}, চাকরির খবর ২০২৬, bd job circular, bdjobapply`}
         />
-        <link rel="canonical" href={`https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`} />
+        <link rel="canonical" href={`https://bdjobapply.site${landingPath}`} />
 
         {/* OpenGraph */}
         <meta property="og:site_name" content="BD Job Apply" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content={isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'} />
+        <meta property="og:title" content={`${landingTitle} | BDJobApply.site`} />
         <meta
           property="og:description"
-          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।'}
+          content={landingDescription}
         />
-        <meta property="og:url" content={`https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`} />
+        <meta property="og:url" content={`https://bdjobapply.site${landingPath}`} />
         <meta property="og:image" content="https://bdjobapply.site/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site' : 'সকল চাকরির খবর ও সরকারি নিয়োগ বিজ্ঞপ্তি ২০২৬ | BDJobApply.site'} />
+        <meta name="twitter:title" content={`${landingTitle} | BDJobApply.site`} />
         <meta
           name="twitter:description"
-          content={isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ও আবেদনের তথ্য দেখুন।' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬ খুঁজুন এবং bdjobapply.site এ সরাসরি অনলাইনে আবেদন করুন।'}
+          content={landingDescription}
         />
         <meta name="twitter:image" content="https://bdjobapply.site/og-image.jpg" />
 
@@ -176,15 +189,15 @@ export const JobsPage: React.FC = () => {
           {JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
-            name: isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি' : 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি',
-            url: `https://bdjobapply.site${isGovernmentLanding ? '/sorkari-chakri' : '/jobs'}`,
-            description: isGovernmentLanding ? 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি ২০২৬' : 'চলমান সকল সরকারি ও বেসরকারি চাকরির নিয়োগ বিজ্ঞপ্তি ২০২৬',
+            name: landingTitle,
+            url: `https://bdjobapply.site${landingPath}`,
+            description: landingDescription,
           })}
         </script>
       </Helmet>
 
       <div className="border-b border-gray-200 pb-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{isGovernmentLanding ? 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি' : 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি'}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{landingTitle.replace(' ২০২৬', '')}</h1>
         <p className="text-xs text-gray-500 mt-1">
           পাতা {currentPage} • প্রতি পেজে ২০টি বিজ্ঞপ্তি • চলমান বিজ্ঞপ্তি আগে, মেয়াদ শেষ সবার নিচে
         </p>
@@ -271,16 +284,16 @@ export const JobsPage: React.FC = () => {
             return (
               <Link
                 key={job.id}
-                to={`/jobs/${job.slug || job.id}`}
+                to={`/jobs/${getPublicJobSlug(job)}`}
                 state={{ preloadedJob: job }}
-                onMouseEnter={() => {
-                  precacheJob(job);
-                  prefetchJobDetail(job.slug || job.id);
-                }}
-                onTouchStart={() => {
-                  precacheJob(job);
-                  prefetchJobDetail(job.slug || job.id);
-                }}
+                  onMouseEnter={() => {
+                    precacheJob(job);
+                    prefetchJobDetail(getPublicJobSlug(job));
+                  }}
+                  onTouchStart={() => {
+                    precacheJob(job);
+                    prefetchJobDetail(getPublicJobSlug(job));
+                  }}
                 className={`bg-white rounded-xl border p-5 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between ${
                   isExpired ? 'border-gray-200 opacity-70' : 'border-gray-200'
                 }`}

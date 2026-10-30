@@ -7,14 +7,10 @@ export function generateSlug(title: string): string {
   const slug = title
     .trim()
     .toLowerCase()
-    // Replace punctuation and symbols with hyphens, preserve Bengali characters (\u0980-\u09FF) and English alphanumeric
     .replace(/[^\w\s\u0980-\u09FF-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  // GitHub Pages/filesystems limit one path segment to roughly 255 bytes;
-  // Bengali characters use multiple UTF-8 bytes, so a character-count limit
-  // alone is not sufficient for generated static routes.
   let result = '';
   for (const character of slug) {
     const next = result + character;
@@ -22,4 +18,14 @@ export function generateSlug(title: string): string {
     result = next;
   }
   return result.replace(/-+$/g, '');
+}
+
+const MAX_PUBLIC_SLUG_BYTES = 160;
+
+/** Use the legacy slug when it is safe; long records use their stable id. */
+export function getPublicJobSlug(job: { slug?: string; id?: string } | null | undefined): string {
+  const slug = String(job?.slug || '').trim();
+  if (!slug) return String(job?.id || '').trim();
+  if (new TextEncoder().encode(slug).length <= MAX_PUBLIC_SLUG_BYTES) return slug;
+  return String(job?.id || slug).trim();
 }

@@ -3,6 +3,8 @@
     { "path": "/", "title": "হোম" },
     { "path": "/jobs", "title": "সকল চাকরি" },
     { "path": "/sorkari-chakri", "title": "সরকারি চাকরি" },
+    { "path": "/private-chakri", "title": "বেসরকারি চাকরি" },
+    { "path": "/ngo-chakri", "title": "এনজিও চাকরি" },
     { "path": "/jobs/:slug", "title": "চাকরির বিস্তারিত" },
     { "path": "/how-to-apply", "title": "আবেদনের নিয়ম" },
     { "path": "/about", "title": "আমাদের সম্পর্কে" },

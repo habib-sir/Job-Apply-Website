@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 const loadFiles = () => import('../../services/files');
 import { getCached, setCached, getCachedWithSWR, precacheJob, findJobInAnyCache } from '../../services/cache';
 import { JobCircular } from '../../types';
+import { getPublicJobSlug } from '../../utils/slugify';
 import { Spinner } from '../../components/common/Spinner';
 import { Button } from '../../components/common/Button';
 import {
@@ -216,7 +217,7 @@ export const JobDetailsPage: React.FC = () => {
 
   // SEO & Social Meta Configuration
   const baseDomain = 'https://bdjobapply.site';
-  const canonicalUrl = `${baseDomain}/jobs/${encodeURIComponent(job.slug || job.id)}`;
+  const canonicalUrl = `${baseDomain}/jobs/${encodeURIComponent(getPublicJobSlug(job))}`;
   const pageTitle = job.seoTitle
     ? `${job.seoTitle} | BDJobApply.site`
     : `${job.title} | BDJobApply.site`;
@@ -432,7 +433,10 @@ export const JobDetailsPage: React.FC = () => {
             <img
               src={coverDataUrl}
               alt={job.title}
-              loading="lazy"
+              width="1200"
+              height="800"
+              loading="eager"
+              fetchPriority="high"
               decoding="async"
               className="w-full max-h-96 object-cover"
             />
@@ -576,6 +580,8 @@ export const JobDetailsPage: React.FC = () => {
                   <img
                     src={circularImagesList[selectedImageIndex] || circularImagesList[0]}
                     alt={`${job.title} - পাতা ${selectedImageIndex + 1}`}
+                    width="1200"
+                    height="1697"
                     loading="lazy"
                     decoding="async"
                     className="w-full max-h-[85vh] object-contain mx-auto cursor-zoom-in"
@@ -637,6 +643,8 @@ export const JobDetailsPage: React.FC = () => {
                       <img
                         src={imgUrl}
                         alt={`${job.title} - পাতা ${idx + 1}`}
+                        width="1200"
+                        height="1697"
                         loading="lazy"
                         decoding="async"
                         className="w-full max-h-[85vh] object-contain mx-auto cursor-zoom-in"
@@ -818,6 +826,8 @@ export const JobDetailsPage: React.FC = () => {
             <img
               src={lightboxImage}
               alt="Circular Zoom View"
+              width="1200"
+              height="1697"
               style={{
                 transform: `scale(${lightboxZoom})`,
                 transition: 'transform 0.15s ease-out',

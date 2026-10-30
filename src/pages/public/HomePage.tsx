@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { getFeedLatest, FeedJobSummary } from '../../services/feed';
 import { getCached, setCached, precacheJob, prefetchJobDetail } from '../../services/cache';
 import { isDummyJob } from '../../utils/recoverLocalJobs';
+import { getPublicJobSlug } from '../../utils/slugify';
 import { safeFormatBnDate, isJobExpired, getDeadlineDiffMs } from '../../utils/dateUtils';
 import { ExamNotice } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
@@ -46,7 +47,7 @@ export const HomePage: React.FC = () => {
           if (typeof window !== 'undefined' && clean.length > 0) {
             const idle = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1000));
             idle(() => {
-              clean.slice(0, 4).forEach((j) => prefetchJobDetail(j.slug || j.id));
+                clean.slice(0, 4).forEach((j) => prefetchJobDetail(getPublicJobSlug(j)));
             });
           }
         }
@@ -191,7 +192,7 @@ export const HomePage: React.FC = () => {
       />
 
       {/* Latest Posts with Category Tabs */}
-      <section className="max-w-6xl mx-auto px-4 space-y-6">
+      <section className="max-w-6xl mx-auto px-4 space-y-6 min-h-[1650px] sm:min-h-[700px]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">সাম্প্রতিক নিয়োগ বিজ্ঞপ্তি</h2>
@@ -237,15 +238,15 @@ export const HomePage: React.FC = () => {
               return (
                 <Link
                   key={job.id}
-                  to={`/jobs/${job.slug || job.id}`}
+                  to={`/jobs/${getPublicJobSlug(job)}`}
                   state={{ preloadedJob: job }}
                   onMouseEnter={() => {
                     precacheJob(job);
-                    prefetchJobDetail(job.slug || job.id);
+                    prefetchJobDetail(getPublicJobSlug(job));
                   }}
                   onTouchStart={() => {
                     precacheJob(job);
-                    prefetchJobDetail(job.slug || job.id);
+                    prefetchJobDetail(getPublicJobSlug(job));
                   }}
                   className="bg-white rounded-xl border border-gray-200 p-5 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between"
                 >
@@ -370,7 +371,10 @@ export const HomePage: React.FC = () => {
               <img
                 src={activeExam.imageUrl}
                 alt={activeExam.title}
+                width="1200"
+                height="800"
                 loading="lazy"
+                decoding="async"
                 className="w-full max-h-[70vh] object-contain rounded-lg border border-gray-100 bg-gray-50"
               />
             )}

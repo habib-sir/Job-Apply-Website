@@ -18,3 +18,18 @@
 
 /
   Cache-Control: no-cache
+
+/jobs/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+/sorkari-chakri
+  Cache-Control: public, max-age=300, must-revalidate
+
+/private-chakri
+  Cache-Control: public, max-age=300, must-revalidate
+
+/ngo-chakri
+  Cache-Control: public, max-age=300, must-revalidate
+
+/sitemap*.xml
+  Cache-Control: public, max-age=300, must-revalidate

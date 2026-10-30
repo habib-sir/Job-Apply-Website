@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { JobCircular } from '../../types';
 import { AlertCircle, Clock } from 'lucide-react';
 import { precacheJob, prefetchJobDetail } from '../../services/cache';
+import { getPublicJobSlug } from '../../utils/slugify';
 
 interface Props {
   tomorrowDeadlineJobs: JobCircular[];
@@ -14,7 +15,7 @@ export const HomeUrgentDeadlines: React.FC<Props> = ({
   thisWeekDeadlineJobs,
 }) => {
   return (
-    <>
+    <div className="min-h-[138px] sm:min-h-0">
       {tomorrowDeadlineJobs.length > 0 && (
         <section className="max-w-6xl mx-auto px-4">
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -32,15 +33,15 @@ export const HomeUrgentDeadlines: React.FC<Props> = ({
               </div>
             </div>
             <Link
-              to={`/jobs/${tomorrowDeadlineJobs[0].slug || tomorrowDeadlineJobs[0].id}`}
+              to={`/jobs/${getPublicJobSlug(tomorrowDeadlineJobs[0])}`}
               state={{ preloadedJob: tomorrowDeadlineJobs[0] }}
               onMouseEnter={() => {
                 precacheJob(tomorrowDeadlineJobs[0]);
-                prefetchJobDetail(tomorrowDeadlineJobs[0].slug || tomorrowDeadlineJobs[0].id);
+                prefetchJobDetail(getPublicJobSlug(tomorrowDeadlineJobs[0]));
               }}
               onTouchStart={() => {
                 precacheJob(tomorrowDeadlineJobs[0]);
-                prefetchJobDetail(tomorrowDeadlineJobs[0].slug || tomorrowDeadlineJobs[0].id);
+                prefetchJobDetail(getPublicJobSlug(tomorrowDeadlineJobs[0]));
               }}
               className="shrink-0 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors"
             >
@@ -68,6 +69,6 @@ export const HomeUrgentDeadlines: React.FC<Props> = ({
           </div>
         </section>
       )}
-    </>
+    </div>
   );
 };

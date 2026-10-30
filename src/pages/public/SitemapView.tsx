@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchJobsList } from '../../services/jobsStore';
+import { getPublicJobSlug } from '../../utils/slugify';
 
 export const SitemapView: React.FC = () => {
   const [xmlContent, setXmlContent] = useState<string>('');
@@ -33,6 +34,9 @@ export const SitemapView: React.FC = () => {
         const urls = [
           { loc: `${base}/`, priority: '1.0', changefreq: 'hourly', lastmod: today },
           { loc: `${base}/jobs`, priority: '0.9', changefreq: 'hourly', lastmod: today },
+          { loc: `${base}/sorkari-chakri`, priority: '0.95', changefreq: 'hourly', lastmod: today },
+          { loc: `${base}/private-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
+          { loc: `${base}/ngo-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
           { loc: `${base}/login`, priority: '0.4', changefreq: 'monthly', lastmod: today },
           { loc: `${base}/register`, priority: '0.5', changefreq: 'monthly', lastmod: today },
         ];
@@ -41,7 +45,7 @@ export const SitemapView: React.FC = () => {
         const jobsList: any[] = await fetchJobsList();
 
         jobsList.forEach((data) => {
-          const slug = data.slug || data.id;
+          const slug = getPublicJobSlug(data);
           let lastmod = today;
           if (data.updatedAt) {
             lastmod = new Date(data.updatedAt).toISOString().split('T')[0];
