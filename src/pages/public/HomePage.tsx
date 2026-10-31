@@ -156,15 +156,15 @@ export const HomePage: React.FC = () => {
         <div className="max-w-4xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-medium text-emerald-200">
             <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-            <span>টেলিটক ও সরকারি চাকরির নির্ভুল অনলাইন আবেদন প্ল্যাটফর্ম</span>
+            <span>সরকারি চাকরির আবেদনে আপনার নির্ভরযোগ্য সহায়ক</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-            চাকরির আবেদন করুন সহজে ও নিশ্চিন্তে
+            আপনার পছন্দের চাকরিতে আবেদন করুন সহজে ও স্বচ্ছ প্রক্রিয়ায়
           </h1>
 
           <p className="text-xs sm:text-sm text-emerald-100/90 max-w-2xl mx-auto leading-relaxed">
-            CV একবার সংরক্ষণ করুন, পছন্দের চালু থাকা চাকরিতে পদ নির্বাচন করুন। Payment verification ও আপনার অনুমোদনের পর আপনার হয়ে Teletalk বা নির্দিষ্ট official portal-এ application করে soft copy ও paid copy দেওয়া হয়।
+            CV একবার সংরক্ষণ করুন, পছন্দের চালু থাকা চাকরিতে পদ নির্বাচন করুন। Payment verification ও আপনার অনুমোদনের পর আমাদের team আপনার হয়ে Teletalk বা নির্দিষ্ট official portal-এ application সহায়তা করে এবং soft copy ও paid copy প্রদান করে।
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
