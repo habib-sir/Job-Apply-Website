@@ -38,7 +38,8 @@ const publicSlugOf = (job) => {
   const slug = slugOf(job);
   return Buffer.byteLength(slug, 'utf8') <= 160 ? slug : String(job?.id || slug).trim();
 };
-const detailUrl = (job, routeSlug = publicSlugOf(job)) => `${BASE}/jobs/${encodeURIComponent(routeSlug)}`;
+const routeUrl = (pathValue) => `${BASE}${pathValue.endsWith('/') ? pathValue : `${pathValue}/`}`;
+const detailUrl = (job, routeSlug = publicSlugOf(job)) => routeUrl(`/jobs/${encodeURIComponent(routeSlug)}`);
 const detailJsonUrl = (job) => `${R2}/jobs/detail/${encodeURIComponent(slugOf(job))}.json`;
 
 async function readJson(url, fallback) {
@@ -55,6 +56,21 @@ async function enrichJob(job) {
   if (!job || !slugOf(job)) return job;
   const detail = await readJson(detailJsonUrl(job), null);
   return detail && typeof detail === 'object' ? { ...job, ...detail } : job;
+}
+
+async function readArchiveJobs() {
+  const index = await readJson(`${R2}/jobs/archive/index.json`, []);
+  if (!Array.isArray(index)) return [];
+  const months = [...new Set(index.map((entry) => entry?.month).filter(Boolean))];
+  const lists = await Promise.all(months.map((month) => readJson(`${R2}/jobs/archive/${month}.json`, [])));
+  const jobsById = new Map();
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    for (const job of list) {
+      if (job?.id) jobsById.set(String(job.id), { ...job, archived: true });
+    }
+  }
+  return index.map((entry) => jobsById.get(String(entry?.id || ''))).filter(Boolean);
 }
 
 function upsertTitle(html, title) {
@@ -105,7 +121,7 @@ function withPageMetadata(template, { title, description, canonical, type = 'web
 
 function layout(content) {
   return `<main lang="bn" style="max-width:960px;margin:0 auto;padding:32px 16px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#111827">
-    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/sorkari-chakri" style="margin-right:16px;color:#065f46">সরকারি চাকরি</a><a href="${BASE}/private-chakri" style="margin-right:16px;color:#065f46">বেসরকারি চাকরি</a><a href="${BASE}/ngo-chakri" style="color:#065f46">এনজিও চাকরি</a></nav></header>
+    <header style="margin-bottom:28px"><a href="${BASE}/" style="color:#065f46;font-weight:800;text-decoration:none">BD Job Apply</a><nav style="margin-top:12px"><a href="${BASE}/jobs/" style="margin-right:16px;color:#065f46">সকল চাকরি</a><a href="${BASE}/sorkari-chakri/" style="margin-right:16px;color:#065f46">সরকারি চাকরি</a><a href="${BASE}/private-chakri/" style="margin-right:16px;color:#065f46">বেসরকারি চাকরি</a><a href="${BASE}/ngo-chakri/" style="color:#065f46">এনজিও চাকরি</a></nav></header>
     ${content}
   </main>`;
 }
@@ -153,7 +169,7 @@ function schemaForHome() {
 }
 
 function schemaForJobs() {
-  return { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/jobs`, inLanguage: 'bn-BD' };
+  return { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: routeUrl('/jobs'), inLanguage: 'bn-BD' };
 }
 
 function inferSalaryFromContent(job) {
@@ -228,23 +244,27 @@ async function main() {
   const local = fs.existsSync(LOCAL_JOBS) ? JSON.parse(fs.readFileSync(LOCAL_JOBS, 'utf8')) : [];
   const remote = await readJson(`${R2}/jobs.json`, local);
   const jobs = (Array.isArray(remote) ? remote : local).filter(isPublished).filter((job) => slugOf(job));
-  const unique = [...new Map(jobs.map((job) => [slugOf(job), job])).values()];
+  const unique = [...new Map(jobs.map((job) => [String(job.id || slugOf(job)), job])).values()];
   const enriched = await Promise.all(unique.map(enrichJob));
+  const archiveJobs = await readArchiveJobs();
+  const archiveUnique = [...new Map(archiveJobs.map((job) => [String(job.id || slugOf(job)), job])).values()];
+  const enrichedArchive = await Promise.all(archiveUnique.map(enrichJob));
+  const allJobs = [...new Map([...enriched, ...enrichedArchive].map((job) => [String(job.id || slugOf(job)), job])).values()];
 
   const homeDescription = 'বাংলাদেশের সরকারি চাকরির খবর, নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা এবং আবেদনের শেষ তারিখ।';
   writeRoute('.', withPageMetadata(template, { title: 'সরকারি চাকরি ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: homeDescription, canonical: `${BASE}/`, schema: schemaForHome(), body: homepageBody(enriched) }));
-  writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: `${BASE}/jobs`, schema: schemaForJobs(), body: jobsBody(enriched) }));
+  writeRoute('jobs', withPageMetadata(template, { title: 'সকল চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি | BD Job Apply', description: 'সরকারি ও অন্যান্য চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের তথ্য এবং আবেদনের সময়সীমা দেখুন।', canonical: routeUrl('/jobs'), schema: schemaForJobs(), body: jobsBody(enriched) }));
   const governmentJobs = enriched.filter((job) => job.category === 'govt');
-  writeRoute('sorkari-chakri', withPageMetadata(template, { title: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/sorkari-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/sorkari-chakri`, inLanguage: 'bn-BD' }, body: governmentJobsBody(governmentJobs) }));
+  writeRoute('sorkari-chakri', withPageMetadata(template, { title: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের সরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, আবেদন পদ্ধতি ও আবেদনের শেষ তারিখ দেখুন।', canonical: routeUrl('/sorkari-chakri'), schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'সরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: routeUrl('/sorkari-chakri'), inLanguage: 'bn-BD' }, body: governmentJobsBody(governmentJobs) }));
   const privateJobs = enriched.filter((job) => job.category === 'private');
   const ngoJobs = enriched.filter((job) => job.category === 'ngo' || job.category === 'brac');
-  writeRoute('private-chakri', withPageMetadata(template, { title: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, আবেদন পদ্ধতি ও শেষ তারিখ খুঁজুন।', canonical: `${BASE}/private-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/private-chakri`, inLanguage: 'bn-BD' }, body: categoryJobsBody(privateJobs, 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন ও আবেদনের শেষ তারিখ দেখুন।', 'বেসরকারি চাকরি') }));
-  writeRoute('ngo-chakri', withPageMetadata(template, { title: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', canonical: `${BASE}/ngo-chakri`, schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: `${BASE}/ngo-chakri`, inLanguage: 'bn-BD' }, body: categoryJobsBody(ngoJobs, 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', 'এনজিও চাকরি') }));
+  writeRoute('private-chakri', withPageMetadata(template, { title: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, আবেদন পদ্ধতি ও শেষ তারিখ খুঁজুন।', canonical: routeUrl('/private-chakri'), schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: routeUrl('/private-chakri'), inLanguage: 'bn-BD' }, body: categoryJobsBody(privateJobs, 'বেসরকারি চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের বেসরকারি চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন ও আবেদনের শেষ তারিখ দেখুন।', 'বেসরকারি চাকরি') }));
+  writeRoute('ngo-chakri', withPageMetadata(template, { title: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', canonical: routeUrl('/ngo-chakri'), schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: routeUrl('/ngo-chakri'), inLanguage: 'bn-BD' }, body: categoryJobsBody(ngoJobs, 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', 'এনজিও চাকরি') }));
   writeRoute('login', withPageMetadata(template, { title: 'লগইন | BD Job Apply', description: 'BD Job Apply অ্যাকাউন্টে লগইন করুন।', canonical: `${BASE}/login`, noindex: true, body: noindexBody('ইউজার লগইন', 'অ্যাকাউন্টে প্রবেশ করতে লগইন করুন।') }));
   writeRoute('register', withPageMetadata(template, { title: 'রেজিস্ট্রেশন | BD Job Apply', description: 'BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।', canonical: `${BASE}/register`, noindex: true, body: noindexBody('নতুন অ্যাকাউন্ট তৈরি', 'দ্রুত চাকরির আবেদনের জন্য নিবন্ধন করুন।') }));
 
   const redirects = [];
-  for (const job of enriched) {
+  for (const job of allJobs) {
     const legacySlug = slugOf(job);
     const routeSlug = publicSlugOf(job);
     const title = `${job.title} | BDJobApply.site`;

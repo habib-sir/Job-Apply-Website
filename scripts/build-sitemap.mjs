@@ -37,7 +37,8 @@ const dateOnly = (v, fallback = today) => {
   return isNaN(d.getTime()) ? fallback : d.toISOString().split('T')[0];
 };
 
-const jobUrl = (slug) => `${BASE}/jobs/${encodeURIComponent(slug)}`;
+const routeUrl = (path) => `${BASE}${path.endsWith('/') ? path : `${path}/`}`;
+const jobUrl = (slug) => routeUrl(`/jobs/${encodeURIComponent(slug)}`);
 const publicJobSlug = (slug, id = '') => {
   const value = String(slug || '').trim();
   if (!value) return String(id || '').trim();
@@ -93,10 +94,10 @@ async function generateSitemaps() {
   // ১. স্ট্যাটিক পেজ
   const staticUrls = [
     { loc: `${BASE}/`, priority: '1.0', changefreq: 'hourly', lastmod: today },
-    { loc: `${BASE}/jobs`, priority: '0.9', changefreq: 'hourly', lastmod: today },
-    { loc: `${BASE}/sorkari-chakri`, priority: '0.95', changefreq: 'hourly', lastmod: today },
-    { loc: `${BASE}/private-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
-    { loc: `${BASE}/ngo-chakri`, priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: routeUrl('/jobs'), priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: routeUrl('/sorkari-chakri'), priority: '0.95', changefreq: 'hourly', lastmod: today },
+    { loc: routeUrl('/private-chakri'), priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: routeUrl('/ngo-chakri'), priority: '0.9', changefreq: 'hourly', lastmod: today },
   ];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-static.xml'), urlsetXml(staticUrls));
   children.push({ loc: `${BASE}/sitemap-static.xml`, lastmod: today });
@@ -132,12 +133,20 @@ async function generateSitemaps() {
     const months = [...byMonth.keys()].sort().reverse();
     for (const month of months) {
       const list = byMonth.get(month);
-      const urls = list.map((e) => ({
+      const archiveJobs = await getJson(`${R2}/jobs/archive/${month}.json`, []);
+      const availableIds = new Set(
+        (Array.isArray(archiveJobs) ? archiveJobs : [])
+          .map((job) => String(job?.id || '').trim())
+          .filter(Boolean),
+      );
+      const urls = list
+        .filter((e) => availableIds.has(String(e.id || '').trim()))
+        .map((e) => ({
         loc: jobUrl(publicJobSlug(e.slug, e.id)),
         priority: '0.5',
         changefreq: 'monthly',
         lastmod: dateOnly(e.deadline, today),
-      }));
+        }));
       const file = `sitemap-archive-${month}.xml`;
       fs.writeFileSync(path.join(OUT_DIR, file), urlsetXml(urls));
       children.push({ loc: `${BASE}/${file}`, lastmod: today });
