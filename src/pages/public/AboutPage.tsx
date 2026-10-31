@@ -13,7 +13,7 @@ export const AboutPage: React.FC = () => (
     <section className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm leading-7 text-gray-800">
       <h2 className="font-bold text-gray-950">আমাদের service কীভাবে কাজ করে?</h2>
       <p className="mt-2">ব্যবহারকারী পছন্দের circular ও পদ নির্বাচন করে Teletalk fee এবং আমাদের পদভিত্তিক service fee প্রদান করেন। Payment যাচাইয়ের পর team application প্রস্তুত করে PDF proof পাঠায়। ব্যবহারকারী তথ্য সঠিক বলে অনুমোদন করলে final Teletalk payment করা হয় এবং User ID/password SMS ও paid copy দেওয়া হয়। ভুল থাকলে সংশোধনের জন্য application আবার Apply ধাপে পাঠানো যায়।</p>
-      <p className="mt-3 font-semibold">BD Job Apply কোনো সরকারি website নয় এবং চাকরি, selection বা নিয়োগের নিশ্চয়তা দেয় না। আমরা শুধু নির্দিষ্ট চালু থাকা official portal-এ application assistance প্রদান করি।</p>
+      <p className="mt-3 font-semibold">BD Job Apply হলো সরকারি ও অন্যান্য চাকরির জন্য একটি স্বাধীন, স্বচ্ছ এবং প্রার্থী-কেন্দ্রিক online application assistance platform। আমরা সংশ্লিষ্ট official circular ও portal অনুসরণ করে নির্দিষ্ট চালু থাকা চাকরিতে আবেদন সহায়তা করি; চূড়ান্ত selection ও নিয়োগ সংশ্লিষ্ট কর্তৃপক্ষের নিজস্ব সিদ্ধান্ত।</p>
     </section>
     <Link to="/contact" className="inline-flex rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-800">যোগাযোগ করুন</Link>
   </div>
