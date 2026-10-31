@@ -164,7 +164,7 @@ export const HomePage: React.FC = () => {
           </h1>
 
           <p className="text-xs sm:text-sm text-emerald-100/90 max-w-2xl mx-auto leading-relaxed">
-            একবার সিভি পূরণ করুন, যেকোনো সার্কুলারে দ্রুত আবেদন করুন। আপনার হয়ে নির্ভুলভাবে Teletalk পোর্টালে ফর্ম জমা দিয়ে সফট কপি ও পেইড কপি প্রদান করা হয়।
+            CV একবার সংরক্ষণ করুন, পছন্দের চালু থাকা চাকরিতে পদ নির্বাচন করুন। Payment verification ও আপনার অনুমোদনের পর আপনার হয়ে Teletalk বা নির্দিষ্ট official portal-এ application করে soft copy ও paid copy দেওয়া হয়।
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -182,6 +182,19 @@ export const HomePage: React.FC = () => {
               <span>সকল চাকরির খবর</span>
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4" aria-labelledby="service-summary-title">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 id="service-summary-title" className="text-lg font-extrabold text-emerald-950">আপনার হয়ে online চাকরির আবেদন সহায়তা</h2>
+              <p className="mt-1 text-sm leading-7 text-emerald-950">Waiting-এ payment যাচাই, Apply-এ form পূরণ, Check-এ PDF proof যাচাই এবং আপনার অনুমোদনের পর Complete করে paid copy দেওয়া হয়। Teletalk fee ও আমাদের পদভিত্তিক service fee আলাদা দেখানো থাকে।</p>
+            </div>
+            <Link to="/how-to-apply" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800">কীভাবে আবেদন করি <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+          </div>
+          <p className="mt-3 border-t border-emerald-200 pt-3 text-xs leading-6 text-emerald-900">সব circular-এ service চালু থাকে না। যে বিজ্ঞপ্তিতে service চালু, সেখানে “আবেদন সেবা চালু” badge থাকবে; অন্যগুলোতে official circular ও application information দেখা যাবে।</p>
         </div>
       </section>
 

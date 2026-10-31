@@ -1,15 +1,18 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, CreditCard, FileText, KeyRound, LogIn, UserPlus, WalletCards } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CreditCard, FileText, KeyRound, Send, WalletCards } from 'lucide-react';
 
 const steps = [
-  { icon: UserPlus, title: 'নতুন অ্যাকাউন্ট তৈরি করুন', text: 'রেজিস্ট্রেশন পেজে মোবাইল নম্বর, নাম ও একটি নিরাপদ পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খুলুন। নিজের নম্বরই ব্যবহার করুন, কারণ আবেদন আপডেট এই নম্বরে পৌঁছাতে পারে।' },
-  { icon: LogIn, title: 'লগইন করুন', text: 'রেজিস্ট্রেশনের পর মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে লগইন করে ড্যাশবোর্ডে যান। পাসওয়ার্ড ভুলে গেলে Forgot Password অপশন ব্যবহার করুন।' },
   { icon: FileText, title: 'সিভি একবার সেভ করুন', text: 'ড্যাশবোর্ডের CV অংশে ব্যক্তিগত তথ্য, ঠিকানা, শিক্ষা, ছবি ও স্বাক্ষর পূরণ করুন। অসম্পূর্ণ তথ্য থাকলে আবেদন শুরুর আগে সিস্টেম আপনাকে জানাবে।' },
-  { icon: CheckCircle2, title: 'চাকরি বেছে আবেদন শুরু করুন', text: 'সকল চাকরি থেকে পছন্দের সার্কুলার খুলে যোগ্যতা ও deadline মিলিয়ে “আবেদন করুন” বেছে নিন। প্রয়োজনীয় তথ্য দেখে আবেদন request জমা দিন।' },
-  { icon: WalletCards, title: 'পেমেন্ট তথ্য পাঠান', text: 'আবেদন screen-এ দেখানো verified bKash/Rocket নম্বরে নির্দেশনা অনুযায়ী টাকা পাঠান। Transaction ID (TrxID) লিখুন এবং প্রয়োজন হলে পরিষ্কার screenshot দিন। PIN বা OTP কখনও দেবেন না।' },
-  { icon: CreditCard, title: 'আবেদনের কপি যাচাই করুন', text: 'টিম আবেদন সম্পন্ন করলে dashboard-এ soft copy দেখুন। সব ঠিক থাকলে confirm করুন; ভুল থাকলে সংশোধনের নোট পাঠান। সরকারি fee ও service fee আলাদা হলে দুটির নির্দেশনা আলাদা করে দেখুন।' },
+  { icon: CheckCircle2, title: 'চাকরি ও পদ বেছে আবেদন শুরু করুন', text: 'সার্কুলারে আমাদের মাধ্যমে আবেদন চালু আছে কি না, যোগ্যতা, পদ, আবেদন শুরুর তারিখ ও deadline মিলিয়ে নির্দিষ্ট পদ নির্বাচন করুন।' },
+  { icon: WalletCards, title: 'Teletalk fee ও service fee দেখুন', text: 'পদভেদে সরকারি Teletalk fee এবং BD Job Apply service fee (সাধারণত ১০–২০ টাকা) আলাদা করে দেখানো হবে। payment দেওয়ার আগে মোট amount মিলিয়ে নিন।' },
+  { icon: WalletCards, title: 'bKash, Rocket বা Nagad-এ payment পাঠান', text: 'Application screen-এ দেখানো verified নম্বরে Send Money করুন। TrxID লিখুন এবং প্রয়োজন হলে screenshot দিন। PIN, OTP বা password কখনও দেবেন না।' },
+  { icon: CreditCard, title: 'Waiting থেকে payment verification', text: 'আমাদের team bKash, Rocket বা Nagad payment যাচাই করে request approve করবে। যাচাই চলাকালে dashboard-এ Waiting status দেখা যাবে।' },
+  { icon: Send, title: 'Apply: আপনার হয়ে form পূরণ', text: 'Payment approve হলে সংরক্ষিত CV ও নির্বাচিত পদের তথ্য ব্যবহার করে team official Teletalk বা নির্দিষ্ট portal-এ আপনার হয়ে application প্রস্তুত করবে।' },
+  { icon: FileText, title: 'Check: PDF proof যাচাই করুন', text: 'আবেদন form পূরণ হলে dashboard-এ soft copy/PDF proof পাঠানো হবে। নাম, জন্মতারিখ, শিক্ষা, ছবি, স্বাক্ষর, পদ ও জেলা ভালোভাবে যাচাই করুন।' },
+  { icon: CheckCircle2, title: 'Complete: অনুমোদনের পর paid copy', text: 'তথ্য সঠিক হলে confirm করুন। আপনার অনুমোদনের পর Teletalk fee payment করা হবে; Teletalk-এর User ID/password SMS এবং paid application copy আপনাকে দেওয়া হবে।' },
+  { icon: FileText, title: 'Correction: ভুল থাকলে সংশোধন', text: 'PDF proof-এ কোনো ভুল থাকলে confirm না করে correction note পাঠান। Application আবার Apply ধাপে যাবে এবং সংশোধনের পর নতুন proof আপনাকে দেখানো হবে।' },
 ];
 
 export const HowToApplyPage: React.FC = () => (
@@ -23,8 +26,13 @@ export const HowToApplyPage: React.FC = () => (
     <header className="max-w-3xl space-y-3">
       <p className="text-sm font-bold text-emerald-700">সহজ ধাপে আবেদন</p>
       <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-950">নতুন অ্যাকাউন্ট থেকে আবেদন সম্পন্ন—পুরো নিয়ম</h1>
-      <p className="text-base leading-8 text-gray-700">একবার সিভি পূরণ করে রাখলে পরের চাকরির আবেদনে সময় কম লাগে। নিচের ধাপগুলো অনুসরণ করুন এবং পেমেন্টের আগে সার্কুলারের নির্দেশনা ভালোভাবে মিলিয়ে নিন।</p>
+      <p className="text-base leading-8 text-gray-700">একবার CV সংরক্ষণ করে নির্দিষ্ট চালু থাকা চাকরিতে আমাদের সহায়তায় আবেদন করতে পারবেন। Payment verification, application proof check এবং আপনার অনুমোদনের পর final Teletalk payment করা হয়।</p>
     </header>
+
+    <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5" aria-labelledby="service-scope-title">
+      <h2 id="service-scope-title" className="text-lg font-bold text-emerald-950">সব বিজ্ঞপ্তিতে আমাদের মাধ্যমে আবেদন চালু থাকে না</h2>
+      <p className="mt-2 text-sm leading-7 text-emerald-950">যেসব চাকরিতে service চালু, সেগুলোতে “সরকারি আবেদন সেবা চালু” বা “অন্যান্য আবেদন সেবা চালু” লেখা থাকবে। service বন্ধ থাকলে আপনি শুধু circular, যোগ্যতা, আবেদন শুরুর তারিখ, deadline এবং official application link দেখতে পারবেন।</p>
+    </section>
 
     <section className="grid gap-4 md:grid-cols-2" aria-label="আবেদনের ধাপসমূহ">
       {steps.map(({ icon: Icon, title, text }, index) => (
@@ -48,6 +56,11 @@ export const HowToApplyPage: React.FC = () => (
         <li>টাকা পাঠানোর পর TrxID সংরক্ষণ করে সঠিকভাবে লিখবেন; একই TrxID একাধিকবার ব্যবহার করবেন না।</li>
         <li>কাউকে PIN, OTP, password বা সম্পূর্ণ card তথ্য দেবেন না। সন্দেহ হলে আগে WhatsApp-এ যোগাযোগ করুন।</li>
       </ul>
+    </section>
+
+    <section className="rounded-2xl border border-gray-200 bg-gray-50 p-5" aria-labelledby="status-title">
+      <h2 id="status-title" className="text-lg font-bold text-gray-950">Application status-এর অর্থ</h2>
+      <p className="mt-2 text-sm leading-7 text-gray-700"><strong>Waiting:</strong> payment যাচাই চলছে। <strong>Apply:</strong> team application প্রস্তুত করছে। <strong>Check:</strong> PDF proof আপনার যাচাইয়ের অপেক্ষায়। <strong>Complete:</strong> final payment ও paid copy দেওয়া হয়েছে। ভুল থাকলে সংশোধনের জন্য request আবার Apply ধাপে যেতে পারে।</p>
     </section>
 
     <div className="flex flex-col gap-3 sm:flex-row">

@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Users,
   CheckCircle2,
+  FileText,
   Tag,
   Layers,
   ZoomIn,
@@ -217,7 +218,7 @@ export const JobDetailsPage: React.FC = () => {
 
   // SEO & Social Meta Configuration
   const baseDomain = 'https://bdjobapply.site';
-  const canonicalUrl = `${baseDomain}/jobs/${encodeURIComponent(getPublicJobSlug(job))}`;
+  const canonicalUrl = `${baseDomain}/jobs/${encodeURIComponent(getPublicJobSlug(job))}/`;
   const pageTitle = job.seoTitle
     ? `${job.seoTitle} | BDJobApply.site`
     : `${job.title} | BDJobApply.site`;
@@ -298,7 +299,7 @@ export const JobDetailsPage: React.FC = () => {
             '@type': 'ListItem',
             position: 2,
             name: 'চাকরির খবর',
-            item: `${baseDomain}/jobs`,
+            item: `${baseDomain}/jobs/`,
           },
           {
             '@type': 'ListItem',
@@ -408,6 +409,12 @@ export const JobDetailsPage: React.FC = () => {
               <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
                 <Send className="w-4 h-4" />
                 <span>অনলাইন আবেদন ও সফট কপি সার্ভিস চালু</span>
+              </div>
+            )}
+            {!job.applyServiceEnabled && !isExpired && (
+              <div className="flex items-center gap-1.5 text-gray-600 font-semibold">
+                <FileText className="w-4 h-4" />
+                <span>শুধু বিজ্ঞপ্তি ও official আবেদন তথ্য</span>
               </div>
             )}
           </div>
@@ -712,6 +719,12 @@ export const JobDetailsPage: React.FC = () => {
           </div>
         )}
 
+        {(!isExpired && job.applyServiceEnabled) && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs leading-6 text-emerald-950">
+            <strong>আমাদের আবেদন প্রক্রিয়া:</strong> payment verification-এর পর team আপনার হয়ে application প্রস্তুত করবে। PDF proof আপনি যাচাই ও অনুমোদন করার পর Teletalk fee payment করে paid copy দেওয়া হবে।
+          </div>
+        )}
+
         {/* Apply CTA Section */}
         <div className="pt-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50 p-5 rounded-xl">
           <div>
@@ -727,8 +740,8 @@ export const JobDetailsPage: React.FC = () => {
                 ? 'এই সার্কুলারের ডেডলাইন অতিক্রান্ত হয়েছে, ফলে আর আবেদন করা যাবে না।'
                 : job.applyServiceEnabled
                 ? job.posts && job.posts.length > 0
-                  ? 'পদভেদে সরকারি ফি + সার্ভিস চার্জ (বিস্তারিত উপরের টেবিলে দেখুন)'
-                  : `টেলিটক ফি: ৳${job.applicationFee || 0} + সার্ভিস চার্জ: ৳${job.serviceCharge !== undefined ? job.serviceCharge : 10} (মোট ৳${(job.applicationFee || 0) + (job.serviceCharge !== undefined ? job.serviceCharge : 10)})`
+                  ? 'পদভেদে Teletalk fee + service fee (বিস্তারিত উপরের টেবিলে দেখুন)। Payment verification-এর পর আপনার অনুমোদনে final payment হবে।'
+                  : `Teletalk fee: ৳${job.applicationFee || 0} + service fee: ৳${job.serviceCharge !== undefined ? job.serviceCharge : 10} (মোট ৳${(job.applicationFee || 0) + (job.serviceCharge !== undefined ? job.serviceCharge : 10)})। PDF proof দেখে অনুমোদনের পর final payment হবে।`
                 : 'বিজ্ঞপ্তিতে দেওয়া অফিশিয়াল লিংক ব্যবহার করে আবেদন করুন।'}
             </p>
           </div>
