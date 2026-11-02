@@ -3,6 +3,7 @@ import { DEFAULT_SALARY_SCALE_CONFIG, SalaryScaleConfig } from '../types';
 export const R2_BASE = 'https://files.bdjobapply.site';
 export const WORKER_URL = 'https://bdjob-worker.masterboom2040.workers.dev';
 const TOKEN_KEY = 'admin_worker_token';
+const LOCAL_SALARY_SCALE_KEY = 'bdjobapply_salary_scales_local';
 
 const isPublished = (j: any) => j && j.status !== 'draft';
 
@@ -187,7 +188,18 @@ export async function fetchSalaryScaleConfig(): Promise<SalaryScaleConfig> {
   } catch {
     // Use grade-only fallback until the admin config is saved.
   }
+  try {
+    const local = JSON.parse(localStorage.getItem(LOCAL_SALARY_SCALE_KEY) || 'null');
+    if (Array.isArray(local?.scales)) return { ...DEFAULT_SALARY_SCALE_CONFIG, ...local, localOnly: true } as SalaryScaleConfig & { localOnly: boolean };
+  } catch {
+    // Ignore unavailable local storage.
+  }
   return DEFAULT_SALARY_SCALE_CONFIG;
+}
+
+/** Worker route deploy না থাকলে admin-এর একই browser-এ temporary fallback। */
+export function saveSalaryScaleLocally(data: SalaryScaleConfig): void {
+  localStorage.setItem(LOCAL_SALARY_SCALE_KEY, JSON.stringify(data));
 }
 
 /** পাবলিক ছবি Worker দিয়ে R2-তে আপলোড; পাবলিক URL ফেরত দেয় */

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Save, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
-import { fetchSalaryScaleConfig, putPublicJson } from '../../services/jobsStore';
+import { fetchSalaryScaleConfig, putPublicJson, saveSalaryScaleLocally } from '../../services/jobsStore';
 import { DEFAULT_SALARY_SCALE_CONFIG, SalaryScaleConfig, SalaryScaleOption, formatSalary } from '../../types';
 import { useToast } from '../../components/common/Toast';
 
@@ -50,7 +50,19 @@ export const AdminSalaryScalePage: React.FC = () => {
       setConfig((current) => ({ ...current, scales, updatedAt: new Date().toISOString() }));
       success('বেতন গ্রেড ও scale সংরক্ষণ হয়েছে। নতুন circular form-এ dropdown-এ আসবে।');
     } catch (err: any) {
-      error(err?.message || 'বেতন scale সংরক্ষণ করা যায়নি');
+      const message = String(err?.message || '');
+      if (message.includes('HTTP 404')) {
+        saveSalaryScaleLocally({
+          version: config.version.trim() || 'জাতীয় বেতন স্কেল ২০২৬',
+          sourceUrl: config.sourceUrl?.trim() || DEFAULT_SALARY_SCALE_CONFIG.sourceUrl,
+          updatedAt: new Date().toISOString(),
+          scales,
+        });
+        setConfig((current) => ({ ...current, scales, updatedAt: new Date().toISOString() }));
+        success('Worker route এখনো deploy না থাকায় এই browser-এ scale সংরক্ষণ হয়েছে। স্থায়ীভাবে sync করতে Worker route update দরকার।');
+      } else {
+        error(err?.message || 'বেতন scale সংরক্ষণ করা যায়নি');
+      }
     } finally {
       setSaving(false);
     }
