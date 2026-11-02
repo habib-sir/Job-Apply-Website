@@ -98,6 +98,9 @@ async function generateSitemaps() {
     { loc: routeUrl('/sorkari-chakri'), priority: '0.95', changefreq: 'hourly', lastmod: today },
     { loc: routeUrl('/private-chakri'), priority: '0.9', changefreq: 'hourly', lastmod: today },
     { loc: routeUrl('/ngo-chakri'), priority: '0.9', changefreq: 'hourly', lastmod: today },
+    { loc: routeUrl('/faq'), priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: routeUrl('/how-to-apply'), priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: routeUrl('/about'), priority: '0.7', changefreq: 'monthly', lastmod: today },
   ];
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap-static.xml'), urlsetXml(staticUrls));
   children.push({ loc: `${BASE}/sitemap-static.xml`, lastmod: today });
