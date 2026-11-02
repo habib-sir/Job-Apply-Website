@@ -10,6 +10,7 @@ import { ExamNotice } from '../../types';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/common/Modal';
 import { HomeUrgentDeadlines } from '../../components/home/HomeUrgentDeadlines';
+import { faqItems } from '../../data/faq';
 import { ArrowRight, Calendar, Sparkles, Award, UserPlus, LogIn, FileText, Send, WalletCards, ShieldCheck } from 'lucide-react';
 
 // R2-তে সংরক্ষিত নোটিশ (ছবির URL সহ হতে পারে)
@@ -334,6 +335,28 @@ export const HomePage: React.FC = () => {
             ))}
           </div>
           <p className="mt-5 text-xs font-semibold leading-6 text-emerald-950">নিরাপত্তা: payment number শুধু নির্বাচিত চাকরির verified screen থেকে নিন। PIN, OTP বা password কাউকে দেবেন না।</p>
+        </div>
+      </section>
+
+      {/* FAQ Preview */}
+      <section className="max-w-6xl mx-auto px-4" aria-labelledby="faq-preview-title">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">সহায়তা ও স্বচ্ছতা</p>
+              <h2 id="faq-preview-title" className="mt-1 text-2xl font-extrabold text-gray-950">সচরাচর জিজ্ঞাসিত প্রশ্ন</h2>
+              <p className="mt-2 text-sm leading-7 text-gray-700">Application service, payment, PDF proof ও correction সম্পর্কে দ্রুত উত্তর দেখুন।</p>
+            </div>
+            <Link to="/faq" className="inline-flex shrink-0 items-center gap-1.5 text-sm font-bold text-emerald-700 hover:text-emerald-900">সব প্রশ্ন দেখুন <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {faqItems.slice(0, 4).map(({ question, answer }) => (
+              <details key={question} className="group rounded-xl border border-gray-200 bg-gray-50">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-gray-900 marker:hidden">{question}</summary>
+                <p className="border-t border-gray-200 px-4 pb-4 pt-3 text-xs leading-6 text-gray-700">{answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

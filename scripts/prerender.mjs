@@ -165,6 +165,26 @@ function serviceInfoBody(title, intro, sections) {
   return layout(`<article><h1>${esc(title)}</h1><p>${esc(intro)}</p>${content}</article>`);
 }
 
+const faqItems = [
+  ['BD Job Apply কী?', 'BD Job Apply সরকারি ও অন্যান্য চাকরির জন্য একটি স্বাধীন, স্বচ্ছ এবং প্রার্থী-কেন্দ্রিক online application assistance platform।'],
+  ['আপনারা কি আমার হয়ে চাকরির আবেদন করেন?', 'যেসব বিজ্ঞপ্তিতে application service চালু থাকে, payment verification-এর পর আমাদের team আপনার হয়ে online application প্রস্তুত করে।'],
+  ['সব চাকরিতে কি application service চালু থাকে?', 'না। Job details page-এ service status দেখা যাবে। Service বন্ধ থাকলেও circular, যোগ্যতা, deadline এবং official application link দেখা যাবে।'],
+  ['Application-এর ধাপগুলো কী?', 'CV Save → Job Select → Fee View → Payment → Waiting → Apply → Check → Complete। ভুল থাকলে Correction request পাঠানো যায়।'],
+  ['Teletalk fee এবং service fee কি আলাদা?', 'হ্যাঁ। সরকারি Teletalk application fee এবং BD Job Apply service fee আলাদাভাবে দেখানো হয়। Payment-এর আগে মোট amount দেখে নিন।'],
+  ['PDF-তে ভুল থাকলে কী করব?', 'Complete বা confirm না করে Correction request পাঠাতে হবে। সংশোধনের পর নতুন proof দেখানো হবে।'],
+  ['আপনারা কি চাকরি পাওয়ার নিশ্চয়তা দেন?', 'না। Application assistance-এর পর selection, পরীক্ষা, ফলাফল ও নিয়োগ সংশ্লিষ্ট কর্তৃপক্ষের সিদ্ধান্তের ওপর নির্ভরশীল।'],
+  ['PIN, OTP বা password কি দিতে হবে?', 'না। কোনো staff বা representative-কে payment PIN, OTP, account password বা sensitive banking information দেবেন না।'],
+];
+
+function faqBody() {
+  const questions = faqItems.map(([question, answer]) => `<details style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:12px 0"><summary style="font-weight:700;cursor:pointer">${esc(question)}</summary><p>${esc(answer)}</p></details>`).join('');
+  return layout(`<article><p style="color:#047857;font-weight:700">সহায়তা ও স্বচ্ছতা</p><h1>সচরাচর জিজ্ঞাসিত প্রশ্ন</h1><p>চাকরির আবেদন সহায়তা, payment verification, application proof এবং service fee সম্পর্কে সাধারণ প্রশ্নের উত্তর।</p>${questions}</article>`);
+}
+
+function faqSchema() {
+  return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqItems.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) };
+}
+
 function redirectBody(target) {
   return `<main lang="bn" style="font-family:system-ui;padding:32px 16px"><h1>পৃষ্ঠাটি নতুন ঠিকানায় সরানো হয়েছে</h1><p><a href="${esc(target)}">নতুন ঠিকানায় যেতে এখানে চাপুন</a></p><script>location.replace(${JSON.stringify(target)})</script></main>`;
 }
@@ -267,6 +287,7 @@ async function main() {
   writeRoute('ngo-chakri', withPageMetadata(template, { title: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি ২০২৬ | BD Job Apply', description: 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', canonical: routeUrl('/ngo-chakri'), schema: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', url: routeUrl('/ngo-chakri'), inLanguage: 'bn-BD' }, body: categoryJobsBody(ngoJobs, 'এনজিও চাকরির খবর ও নিয়োগ বিজ্ঞপ্তি', 'বাংলাদেশের এনজিও চাকরির সর্বশেষ নিয়োগ বিজ্ঞপ্তি, পদের যোগ্যতা, বেতন, জেলা ও আবেদনের শেষ তারিখ দেখুন।', 'এনজিও চাকরি') }));
   writeRoute('about', withPageMetadata(template, { title: 'আমাদের সম্পর্কে | অনলাইন চাকরির আবেদন সহায়তা | BD Job Apply', description: 'BD Job Apply কীভাবে CV সংরক্ষণ, payment verification ও ব্যবহারকারীর অনুমোদনের পর নির্দিষ্ট চাকরিতে online application সহায়তা করে তা জানুন।', canonical: routeUrl('/about'), body: serviceInfoBody('BD Job Apply সম্পর্কে', 'BD Job Apply একটি private online job application assistance platform। ব্যবহারকারীরা CV সংরক্ষণ করে নির্দিষ্ট চালু থাকা সরকারি, বেসরকারি ও NGO চাকরিতে আমাদের সহায়তায় আবেদন করতে পারেন।', [{ heading: 'আমাদের service কীভাবে কাজ করে?', text: 'ব্যবহারকারী circular ও পদ নির্বাচন করে Teletalk fee এবং পদভিত্তিক service fee প্রদান করেন। Payment যাচাইয়ের পর team application প্রস্তুত করে PDF proof পাঠায়। ব্যবহারকারী অনুমোদন করলে final Teletalk payment করে User ID/password SMS ও paid copy দেওয়া হয়।' }, { heading: 'আমাদের স্বচ্ছতার অঙ্গীকার', text: 'BD Job Apply হলো সরকারি ও অন্যান্য চাকরির জন্য একটি স্বাধীন, স্বচ্ছ এবং প্রার্থী-কেন্দ্রিক online application assistance platform। আমরা সংশ্লিষ্ট official circular ও portal অনুসরণ করে নির্দিষ্ট চালু থাকা চাকরিতে আবেদন সহায়তা করি; চূড়ান্ত selection ও নিয়োগ সংশ্লিষ্ট কর্তৃপক্ষের নিজস্ব সিদ্ধান্ত।' }]) }));
   writeRoute('how-to-apply', withPageMetadata(template, { title: 'আবেদনের নিয়ম | BD Job Apply', description: 'CV save, job select, fee view, payment, Waiting, Apply, Check, Complete এবং Correction—চাকরির আবেদন সহায়তার ৯টি ধাপ।', canonical: routeUrl('/how-to-apply'), body: serviceInfoBody('চাকরির আবেদন সহায়তার ৯ ধাপ', 'CV save থেকে paid copy পাওয়া পর্যন্ত BD Job Apply-এর application assistance workflow দেখুন।', [{ heading: 'CV Save থেকে Payment', text: 'CV সংরক্ষণ করুন, চালু থাকা চাকরি ও পদ নির্বাচন করুন, Teletalk fee ও service fee দেখুন এবং verified bKash, Rocket বা Nagad নম্বরে payment পাঠান।' }, { heading: 'Waiting, Apply ও Check', text: 'Team payment যাচাই করে Waiting থেকে Apply status-এ application প্রস্তুত করে। এরপর PDF proof Check করে নাম, জন্মতারিখ, পদ ও অন্যান্য তথ্য যাচাই করুন।' }, { heading: 'Complete ও Correction', text: 'তথ্য সঠিক হলে অনুমোদন দিন; তারপর Teletalk fee payment, User ID/password SMS এবং paid copy দেওয়া হবে। ভুল থাকলে correction note পাঠিয়ে application আবার Apply ধাপে পাঠানো যায়।' }]) }));
+  writeRoute('faq', withPageMetadata(template, { title: 'সচরাচর জিজ্ঞাসিত প্রশ্ন | চাকরির আবেদন সহায়তা | BD Job Apply', description: 'BD Job Apply-এর online চাকরির আবেদন সহায়তা, Teletalk fee, payment verification, PDF proof ও correction সম্পর্কে সাধারণ প্রশ্নের উত্তর।', canonical: routeUrl('/faq'), schema: faqSchema(), body: faqBody() }));
   writeRoute('login', withPageMetadata(template, { title: 'লগইন | BD Job Apply', description: 'BD Job Apply অ্যাকাউন্টে লগইন করুন।', canonical: `${BASE}/login`, noindex: true, body: noindexBody('ইউজার লগইন', 'অ্যাকাউন্টে প্রবেশ করতে লগইন করুন।') }));
   writeRoute('register', withPageMetadata(template, { title: 'রেজিস্ট্রেশন | BD Job Apply', description: 'BD Job Apply-এ নতুন অ্যাকাউন্ট তৈরি করুন।', canonical: `${BASE}/register`, noindex: true, body: noindexBody('নতুন অ্যাকাউন্ট তৈরি', 'দ্রুত চাকরির আবেদনের জন্য নিবন্ধন করুন।') }));
 
