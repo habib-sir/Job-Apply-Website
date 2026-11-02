@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Calendar, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getCached, setCached, precacheJob, getCachedWithSWR, prefetchJobDetail } from '../../services/cache';
 import { JobCircular } from '../../types';
 import { isDummyJob } from '../../utils/recoverLocalJobs';
@@ -11,6 +11,7 @@ import { Spinner } from '../../components/common/Spinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { fetchJobsList } from '../../services/jobsStore';
 import { getPublicJobSlug } from '../../utils/slugify';
+import { getSavedJobIds, subscribeToSavedJobs, toggleSavedJob } from '../../services/savedJobs';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -46,8 +47,16 @@ export const JobsPage: React.FC = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedJobIds());
 
   const ALL_JOBS_KEY = 'jobs_all';
+
+  useEffect(() => subscribeToSavedJobs(() => setSavedIds(getSavedJobIds())), []);
+
+  const handleSaveToggle = (jobId: string) => {
+    toggleSavedJob(jobId);
+    setSavedIds(getSavedJobIds());
+  };
 
   // PublicLayout-এর মেনু একই /jobs route-এ শুধু query string বদলায়।
   // তাই component remount না হলেও URL-এর category/search অনুযায়ী state sync করতে হবে।
@@ -282,8 +291,8 @@ export const JobsPage: React.FC = () => {
             const isExpired = isJobExpired(job.deadline, now);
 
             return (
-              <Link
-                key={job.id}
+              <div key={job.id} className="relative">
+                <Link
                 to={`/jobs/${getPublicJobSlug(job)}`}
                 state={{ preloadedJob: job }}
                   onMouseEnter={() => {
@@ -294,7 +303,7 @@ export const JobsPage: React.FC = () => {
                     precacheJob(job);
                     prefetchJobDetail(getPublicJobSlug(job));
                   }}
-                className={`bg-white rounded-xl border p-5 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between ${
+                className={`bg-white rounded-xl border p-5 pr-14 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between ${
                   isExpired ? 'border-gray-200 opacity-70' : 'border-gray-200'
                 }`}
               >
@@ -333,7 +342,17 @@ export const JobsPage: React.FC = () => {
                   </div>
                   <span className="font-semibold text-emerald-700">আবেদন করুন →</span>
                 </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleSaveToggle(String(job.id))}
+                  className="absolute right-3 top-3 rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100"
+                  aria-label={savedIds.includes(String(job.id)) ? 'সংরক্ষিত তালিকা থেকে সরান' : 'চাকরি সংরক্ষণ করুন'}
+                  title={savedIds.includes(String(job.id)) ? 'সংরক্ষিত তালিকা থেকে সরান' : 'চাকরি সংরক্ষণ করুন'}
+                >
+                  {savedIds.includes(String(job.id)) ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
+                </button>
+              </div>
             );
           })}
         </div>
