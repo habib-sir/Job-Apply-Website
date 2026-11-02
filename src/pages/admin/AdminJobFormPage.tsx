@@ -46,6 +46,7 @@ import {
   Layers,
   Plus,
   Check,
+  FileJson,
 } from 'lucide-react';
 
 export const AdminJobFormPage: React.FC = () => {
@@ -87,6 +88,14 @@ export const AdminJobFormPage: React.FC = () => {
   const [multiUploadProgress, setMultiUploadProgress] = useState('');
   const [posts, setPosts] = useState<JobPostItem[]>([{ name: '', count: 1, district: 'ALL' }]);
   const [salaryScales, setSalaryScales] = useState<SalaryScaleOption[]>([]);
+  const [organizationName, setOrganizationName] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [jobLocation, setJobLocation] = useState<Record<string, string>>({});
+  const [photoSpec, setPhotoSpec] = useState({ width: 300, height: 300, maxKB: 100 });
+  const [signatureSpec, setSignatureSpec] = useState({ width: 300, height: 80, maxKB: 60 });
+
+  const [jsonImportText, setJsonImportText] = useState('');
+  const [jsonImportOpen, setJsonImportOpen] = useState(false);
 
   // SEO & Social Optimization States
   const [seoTitle, setSeoTitle] = useState('');
@@ -106,6 +115,91 @@ export const AdminJobFormPage: React.FC = () => {
   const [aiSourceText, setAiSourceText] = useState('');
   const [aiExtracting, setAiExtracting] = useState(false);
   const [aiError, setAiError] = useState('');
+
+  const toDateTimeLocal = (value: any) => {
+    if (!value) return '';
+    try {
+      const date = value?.toDate ? value.toDate() : new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16);
+    } catch {
+      return '';
+    }
+  };
+
+  const applyImportedJob = (raw: any) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('JSON object পাওয়া যায়নি');
+    if (!String(raw.title || '').trim()) throw new Error('JSON-এ title field আবশ্যক');
+    if (!Array.isArray(raw.posts) || raw.posts.length === 0) throw new Error('JSON-এ অন্তত একটি posts item থাকতে হবে');
+    const allowedCategories: JobCategory[] = ['govt', 'private', 'ngo', 'pharma', 'brac', 'foreign', 'solution'];
+    const nextCategory = allowedCategories.includes(raw.category) ? raw.category : 'govt';
+
+    setTitle(String(raw.title).trim());
+    setSlug(String(raw.slug || generateSlug(String(raw.title))).trim());
+    setCategory(nextCategory);
+    setStatus('draft');
+    setPublishedAt('');
+    setContent(String(raw.content || ''));
+    setApplicationStartDate(toDateTimeLocal(raw.applicationStartDate));
+    setDeadline(toDateTimeLocal(raw.deadline));
+    setApplyLink(String(raw.applyLink || ''));
+    setApplyServiceEnabled(Boolean(raw.applyServiceEnabled));
+    setApplicationFee(Number(raw.applicationFee) || 0);
+    setServiceCharge(Number(raw.serviceCharge) || 0);
+    setSalaryGrade(String(raw.baseSalary?.grade || ''));
+    setSalaryMin(raw.baseSalary?.minValue == null ? '' : Number(raw.baseSalary.minValue));
+    setSalaryMax(raw.baseSalary?.maxValue == null ? '' : Number(raw.baseSalary.maxValue));
+    setOrganizationName(String(raw.organizationName || ''));
+    setEmploymentType(String(raw.employmentType || ''));
+    setJobLocation(raw.location && typeof raw.location === 'object' ? raw.location : {});
+    setPhotoSpec(raw.photoSpec && typeof raw.photoSpec === 'object' ? { width: Number(raw.photoSpec.width) || 300, height: Number(raw.photoSpec.height) || 300, maxKB: Number(raw.photoSpec.maxKB) || 100 } : { width: 300, height: 300, maxKB: 100 });
+    setSignatureSpec(raw.signatureSpec && typeof raw.signatureSpec === 'object' ? { width: Number(raw.signatureSpec.width) || 300, height: Number(raw.signatureSpec.height) || 80, maxKB: Number(raw.signatureSpec.maxKB) || 60 } : { width: 300, height: 80, maxKB: 60 });
+    setCircularLink(String(raw.circularLink || raw.circularFile || ''));
+    setCircularImages(Array.isArray(raw.circularImages) ? raw.circularImages.filter((item: any) => typeof item === 'string') : []);
+    setPosts(raw.posts.map((post: any) => ({
+      name: String(post?.name || ''),
+      count: Number(post?.count) || 1,
+      district: post?.district || 'ALL',
+      ...(Array.isArray(post?.districts) ? { districts: post.districts } : {}),
+      ...(post?.salaryGrade ? { salaryGrade: String(post.salaryGrade) } : {}),
+      ...(post?.salaryMin != null ? { salaryMin: Number(post.salaryMin) } : {}),
+      ...(post?.salaryMax != null ? { salaryMax: Number(post.salaryMax) } : {}),
+      ...(post?.applicationFee != null ? { applicationFee: Number(post.applicationFee) } : {}),
+      ...(post?.serviceCharge != null ? { serviceCharge: Number(post.serviceCharge) } : {}),
+    })));
+    setSeoTitle(String(raw.seoTitle || ''));
+    setMetaDescription(String(raw.metaDescription || ''));
+    setFocusKeyword(String(raw.focusKeyword || ''));
+    setTags(Array.isArray(raw.tags) ? raw.tags.map(String).filter(Boolean) : []);
+    setHasCover(Boolean(raw.hasCover || raw.featuredImage));
+    if (raw.featuredImage) setCoverPreview(String(raw.featuredImage));
+    setJsonImportOpen(false);
+    success('JSON import হয়েছে। নিরাপত্তার জন্য status Draft রাখা হয়েছে—তথ্য যাচাই করে Save করুন।');
+  };
+
+  const handleJsonImport = () => {
+    try {
+      applyImportedJob(JSON.parse(jsonImportText));
+    } catch (err: any) {
+      error(err?.message || 'সঠিক JSON দিন');
+    }
+  };
+
+  const handleJsonFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '');
+      setJsonImportText(text);
+      try {
+        applyImportedJob(JSON.parse(text));
+      } catch (err: any) {
+        error(err?.message || 'JSON file পড়া যায়নি');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
 
   const handleAiAutofill = async () => {
     setAiError('');
@@ -276,6 +370,11 @@ export const AdminJobFormPage: React.FC = () => {
           setApplyServiceEnabled(data.applyServiceEnabled !== undefined ? Boolean(data.applyServiceEnabled) : true);
           setApplicationFee(data.applicationFee || 0);
           setServiceCharge(data.serviceCharge || 0);
+          setOrganizationName(data.organizationName || '');
+          setEmploymentType(data.employmentType || '');
+          setJobLocation(data.location && typeof data.location === 'object' ? data.location : {});
+          setPhotoSpec(data.photoSpec || { width: 300, height: 300, maxKB: 100 });
+          setSignatureSpec(data.signatureSpec || { width: 300, height: 80, maxKB: 60 });
           setSalaryGrade(data.baseSalary?.grade || '');
           setSalaryMin(data.baseSalary?.minValue ?? '');
           setSalaryMax(data.baseSalary?.maxValue ?? '');
@@ -620,6 +719,9 @@ export const AdminJobFormPage: React.FC = () => {
         deadline: deadlineDate ? deadlineDate.toISOString() : null,
         publishedAt: pubDate.toISOString(),
         applyLink: (applyLink || '').trim(),
+        organizationName: organizationName.trim() || undefined,
+        employmentType: employmentType.trim() || undefined,
+        location: Object.keys(jobLocation).length > 0 ? jobLocation : undefined,
         applyServiceEnabled: Boolean(applyServiceEnabled),
         applicationFee: Number(applicationFee) || 0,
         serviceCharge: Number(serviceCharge) || 0,
@@ -643,8 +745,8 @@ export const AdminJobFormPage: React.FC = () => {
         metaDescription: (metaDescription || '').trim() || null,
         focusKeyword: (focusKeyword || '').trim() || null,
         tags: tags.map((t) => t.trim()).filter(Boolean),
-        photoSpec: { width: 300, height: 300, maxKB: 100 },
-        signatureSpec: { width: 300, height: 80, maxKB: 60 },
+        photoSpec,
+        signatureSpec,
         createdAt: nowIso, // সম্পাদনায় saveJobToWorker পুরনো createdAt বজায় রাখে
         updatedAt: nowIso,
       };
@@ -690,6 +792,46 @@ export const AdminJobFormPage: React.FC = () => {
         <Button type="submit" loading={saving} icon={<Save className="w-4 h-4" />}>
           {isEdit ? 'আপডেট করুন' : 'প্রকাশ করুন'}
         </Button>
+      </div>
+
+      {/* Direct JSON Import */}
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-indigo-100 p-2 text-indigo-700"><FileJson className="h-5 w-5" aria-hidden="true" /></div>
+            <div>
+              <h3 className="text-sm font-bold text-indigo-950">Job JSON Import</h3>
+              <p className="mt-0.5 text-xs leading-6 text-indigo-900">AI থেকে তৈরি JobCircular JSON paste করুন অথবা .json file upload করে form auto-fill করুন। Import-এর পর নিরাপত্তার জন্য status Draft থাকবে।</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 hover:bg-indigo-100">
+              <Upload className="h-3.5 w-3.5" aria-hidden="true" /> JSON file
+              <input type="file" accept="application/json,.json" onChange={handleJsonFileImport} className="hidden" />
+            </label>
+            <button type="button" onClick={() => setJsonImportOpen((open) => !open)} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800">
+              {jsonImportOpen ? 'বন্ধ করুন' : 'JSON paste করুন'}
+            </button>
+          </div>
+        </div>
+        {jsonImportOpen && (
+          <div className="mt-4 space-y-3 border-t border-indigo-200 pt-4">
+            <textarea
+              value={jsonImportText}
+              onChange={(event) => setJsonImportText(event.target.value)}
+              rows={8}
+              spellCheck={false}
+              placeholder='{"title":"...","posts":[...],"deadline":"2026-11-25T16:00:00+06:00"}'
+              className="w-full rounded-xl border border-indigo-300 bg-white p-3 font-mono text-xs text-gray-900 outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200"
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[11px] leading-5 text-indigo-900">প্রয়োজনীয় field: <code>title</code> এবং অন্তত একটি <code>posts</code> item। JSON ভুল হলে form-এর কোনো তথ্য পরিবর্তন হবে না।</p>
+              <button type="button" onClick={handleJsonImport} disabled={!jsonImportText.trim()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <FileJson className="h-4 w-4" aria-hidden="true" /> Import করে form পূরণ করুন
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* AI Smart Autofill Card (Competitor Outranking & Full Generator) */}
