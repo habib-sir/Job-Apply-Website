@@ -49,6 +49,8 @@ import {
   FileJson,
 } from 'lucide-react';
 
+const IMAGE_TO_JOB_JSON_PROMPT = `এই চাকরির circular-এর ছবি পড়ে আমার JobCircular schema অনুযায়ী শুধুমাত্র valid JSON তৈরি করুন। কোনো তথ্য অনুমান করবেন না; না পাওয়া তথ্য null, 0 বা [] রাখুন। বাংলা সংখ্যা ইংরেজি সংখ্যায় রূপান্তর করুন। প্রতিটি পদ posts array-তে আলাদা দিন এবং name, count, district, districts, salaryGrade, salaryMin, salaryMax, applicationFee, serviceCharge দিন। deadline ও applicationStartDate ISO format (YYYY-MM-DDTHH:mm:ss+06:00) দিন। সরকারি Teletalk fee ও serviceCharge আলাদা রাখুন। ছবিতে official apply URL না থাকলে null দিন। content-এ প্রতিষ্ঠান, পদ, যোগ্যতা, বেতন, জেলা, তারিখ, fee ও আবেদন পদ্ধতি লিখুন। applyServiceEnabled false এবং status draft রাখুন। JSON-এর বাইরে কোনো লেখা দেবেন না। Structure: {"id":"","title":"","slug":"","category":"govt","content":"","hasCover":true,"circularLink":null,"featuredImage":null,"circularFile":null,"circularImages":[],"deadline":null,"applicationStartDate":null,"applyLink":null,"organizationName":"","employmentType":"","location":{"addressLocality":"বাংলাদেশ","addressRegion":"","streetAddress":"","postalCode":""},"baseSalary":{"grade":"","currency":"BDT","minValue":0,"maxValue":0,"unitText":"মাসিক"},"applyServiceEnabled":false,"applicationFee":0,"serviceCharge":0,"photoSpec":{"width":0,"height":0,"maxKB":0},"signatureSpec":{"width":0,"height":0,"maxKB":0},"posts":[{"name":"","count":0,"district":"ALL","districts":[],"salaryGrade":"","salaryMin":0,"salaryMax":0,"applicationFee":0,"serviceCharge":0}],"seoTitle":"","metaDescription":"","focusKeyword":"","tags":[],"status":"draft","publishedAt":null,"createdAt":null,"updatedAt":null}`;
+
 export const AdminJobFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
@@ -199,6 +201,15 @@ export const AdminJobFormPage: React.FC = () => {
     };
     reader.readAsText(file);
     event.target.value = '';
+  };
+
+  const handleCopyImagePrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(IMAGE_TO_JOB_JSON_PROMPT);
+      success('ছবি থেকে JSON তৈরির prompt কপি হয়েছে');
+    } catch {
+      error('Prompt কপি করা যায়নি। Browser clipboard permission যাচাই করুন।');
+    }
   };
 
   const handleAiAutofill = async () => {
@@ -802,6 +813,9 @@ export const AdminJobFormPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-indigo-950">Job JSON Import</h3>
               <p className="mt-0.5 text-xs leading-6 text-indigo-900">AI থেকে তৈরি JobCircular JSON paste করুন অথবা .json file upload করে form auto-fill করুন। Import-এর পর নিরাপত্তার জন্য status Draft থাকবে।</p>
+              <button type="button" onClick={handleCopyImagePrompt} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-800 hover:bg-indigo-100">
+                <FileText className="h-3.5 w-3.5" aria-hidden="true" /> ছবি থেকে JSON prompt কপি করুন
+              </button>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
