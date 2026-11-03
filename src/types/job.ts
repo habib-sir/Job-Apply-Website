@@ -3,10 +3,11 @@ export type JobStatus = 'draft' | 'published' | 'scheduled';
 
 export interface JobPostItem {
   name: string;
-  count: number;
+  count: number | null;
   district: 'ALL' | string;
   districts?: string[]; // Multiple allowed districts support
   salaryGrade?: string;
+  salaryText?: string;
   salaryMin?: number;
   salaryMax?: number;
   applicationFee?: number;

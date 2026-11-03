@@ -486,10 +486,10 @@ export const JobDetailsPage: React.FC = () => {
                     return (
                       <tr key={idx}>
                         <td className="p-2.5 font-bold text-gray-800">{p.name}</td>
-                        <td className="p-2.5 text-gray-600">{p.count} জন</td>
+                        <td className="p-2.5 text-gray-600">{p.count == null ? 'নির্ধারিত নয়' : `${p.count} জন`}</td>
                         <td className="p-2.5 text-emerald-800 font-semibold">
-                          {p.salaryGrade || p.salaryMin != null || p.salaryMax != null
-                            ? `${p.salaryGrade ? `${p.salaryGrade}: ` : ''}${p.salaryMin != null ? Number(p.salaryMin).toLocaleString('bn-BD') : '—'}–${p.salaryMax != null ? Number(p.salaryMax).toLocaleString('bn-BD') : '—'} টাকা`
+                          {p.salaryText || p.salaryGrade || p.salaryMin != null || p.salaryMax != null
+                            ? p.salaryText || `${p.salaryGrade ? `${p.salaryGrade}: ` : ''}${p.salaryMin != null ? Number(p.salaryMin).toLocaleString('bn-BD') : '—'}–${p.salaryMax != null ? Number(p.salaryMax).toLocaleString('bn-BD') : '—'} টাকা`
                             : 'বিজ্ঞপ্তি দেখুন'}
                         </td>
                         <td className="p-2.5 text-emerald-700 font-medium">

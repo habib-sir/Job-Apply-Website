@@ -1,7 +1,7 @@
 /**
  * Generates URL-safe slugs supporting Bengali and English characters.
  */
-export function generateSlug(title: string): string {
+export function generateSlug(title: string, fallbackId?: string): string {
   if (!title) return '';
 
   const slug = title
@@ -17,7 +17,13 @@ export function generateSlug(title: string): string {
     if (new TextEncoder().encode(next).length > 180) break;
     result = next;
   }
-  return result.replace(/-+$/g, '');
+  const clean = result.replace(/-+$/g, '');
+  // Bengali URL-এ byte দ্রুত বেড়ে যায়; stable ID দিয়ে ছোট fallback রাখি।
+  if (new TextEncoder().encode(clean).length > 90 && fallbackId) {
+    const safeId = fallbackId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-24);
+    if (safeId) return `job-${safeId}`;
+  }
+  return new TextDecoder().decode(new TextEncoder().encode(clean).slice(0, 90)).replace(/-+$/g, '');
 }
 
 const MAX_PUBLIC_SLUG_BYTES = 160;

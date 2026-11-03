@@ -190,7 +190,7 @@ export const ApplyJobPage: React.FC = () => {
           jobTitle: job.title,
           applyLink: job.applyLink || '',
           postName: selectedPostName,
-          postCount: selectedPostObj?.count || 1,
+          postCount: selectedPostObj?.count ?? null,
           district: candidateDistrict,
           educationLevel,
           smsNumber,
@@ -280,7 +280,7 @@ export const ApplyJobPage: React.FC = () => {
 
                 return (
                   <option key={idx} value={p.name} disabled={!isEligible}>
-                    {p.name} ({p.count} জন) - {districtDisplay}
+                    {p.name} ({p.count == null ? 'পদসংখ্যা নির্ধারিত নয়' : `${p.count} জন`}) - {districtDisplay}
                     {!isEligible ? ' [আপনার স্থায়ী জেলার জন্য প্রযোজ্য নয়]' : ''}
                   </option>
                 );

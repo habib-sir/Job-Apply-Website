@@ -49,7 +49,7 @@ import {
   FileJson,
 } from 'lucide-react';
 
-const IMAGE_TO_JOB_JSON_PROMPT = `এই চাকরির circular-এর ছবি পড়ে আমার JobCircular schema অনুযায়ী শুধুমাত্র valid JSON তৈরি করুন। কোনো তথ্য অনুমান করবেন না; না পাওয়া তথ্য null, 0 বা [] রাখুন। বাংলা সংখ্যা ইংরেজি সংখ্যায় রূপান্তর করুন। প্রতিটি পদ posts array-তে আলাদা দিন এবং name, count, district, districts, salaryGrade, salaryMin, salaryMax, applicationFee, serviceCharge দিন। deadline ও applicationStartDate ISO format (YYYY-MM-DDTHH:mm:ss+06:00) দিন। সরকারি Teletalk fee ও serviceCharge আলাদা রাখুন। ছবিতে official apply URL না থাকলে null দিন। content-এ প্রতিষ্ঠান, পদ, যোগ্যতা, বেতন, জেলা, তারিখ, fee ও আবেদন পদ্ধতি লিখুন। applyServiceEnabled false এবং status draft রাখুন। JSON-এর বাইরে কোনো লেখা দেবেন না। Structure: {"id":"","title":"","slug":"","category":"govt","content":"","hasCover":true,"circularLink":null,"featuredImage":null,"circularFile":null,"circularImages":[],"deadline":null,"applicationStartDate":null,"applyLink":null,"organizationName":"","employmentType":"","location":{"addressLocality":"বাংলাদেশ","addressRegion":"","streetAddress":"","postalCode":""},"baseSalary":{"grade":"","currency":"BDT","minValue":0,"maxValue":0,"unitText":"মাসিক"},"applyServiceEnabled":false,"applicationFee":0,"serviceCharge":0,"photoSpec":{"width":0,"height":0,"maxKB":0},"signatureSpec":{"width":0,"height":0,"maxKB":0},"posts":[{"name":"","count":0,"district":"ALL","districts":[],"salaryGrade":"","salaryMin":0,"salaryMax":0,"applicationFee":0,"serviceCharge":0}],"seoTitle":"","metaDescription":"","focusKeyword":"","tags":[],"status":"draft","publishedAt":null,"createdAt":null,"updatedAt":null}`;
+const IMAGE_TO_JOB_JSON_PROMPT = `এই circular-এর ছবি পড়ে আমার JobCircular schema অনুযায়ী শুধুমাত্র valid JSON দিন। কোনো তথ্য অনুমান করবেন না; অজানা তথ্য null, 0 বা [] রাখুন। বাংলা সংখ্যা ইংরেজি সংখ্যায় রূপান্তর করুন। প্রতিটি পদ posts array-তে দিন; পদসংখ্যা না থাকলে count:null, salary grade না থাকলে salaryGrade:null দিন। Teletalk fee ও serviceCharge আলাদা রাখুন। deadline ও applicationStartDate ISO format দিন। SEO super optimized করুন: title ৫০–৬০ অক্ষর, metaDescription ১৪০–১৬০ অক্ষর, focusKeyword এবং ৫–৮টি natural tags দিন; সরকারি চাকরি/বেসরকারি চাকরি/এনজিও চাকরি ও প্রতিষ্ঠানের প্রাসঙ্গিক keyword স্বাভাবিকভাবে ব্যবহার করুন, keyword stuffing নয়। content-এ unique Bengali headings, প্রতিষ্ঠান, পদ, যোগ্যতা, বেতন, জেলা, তারিখ, fee ও আবেদন পদ্ধতি লিখুন। applyServiceEnabled false ও status draft রাখুন। JSON-এর বাইরে কোনো লেখা দেবেন না। Structure: {"id":"","title":"","slug":"","category":"govt","content":"","hasCover":true,"circularLink":null,"featuredImage":null,"circularFile":null,"circularImages":[],"deadline":null,"applicationStartDate":null,"applyLink":null,"organizationName":"","employmentType":"","location":{"addressLocality":"বাংলাদেশ","addressRegion":"","streetAddress":"","postalCode":""},"baseSalary":{"grade":"","currency":"BDT","minValue":0,"maxValue":0,"unitText":"মাসিক"},"applyServiceEnabled":false,"applicationFee":0,"serviceCharge":0,"photoSpec":{"width":0,"height":0,"maxKB":0},"signatureSpec":{"width":0,"height":0,"maxKB":0},"posts":[{"name":"","count":null,"district":"ALL","districts":[],"salaryGrade":null,"salaryText":"","salaryMin":null,"salaryMax":null,"applicationFee":0,"serviceCharge":0}],"seoTitle":"","metaDescription":"","focusKeyword":"","tags":[],"status":"draft","publishedAt":null,"createdAt":null,"updatedAt":null}`;
 
 export const AdminJobFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -136,7 +136,7 @@ export const AdminJobFormPage: React.FC = () => {
     const nextCategory = allowedCategories.includes(raw.category) ? raw.category : 'govt';
 
     setTitle(String(raw.title).trim());
-    setSlug(String(raw.slug || generateSlug(String(raw.title))).trim());
+    setSlug(String(raw.slug || generateSlug(String(raw.title), jobId)).trim());
     setCategory(nextCategory);
     setStatus('draft');
     setPublishedAt('');
@@ -159,10 +159,11 @@ export const AdminJobFormPage: React.FC = () => {
     setCircularImages(Array.isArray(raw.circularImages) ? raw.circularImages.filter((item: any) => typeof item === 'string') : []);
     setPosts(raw.posts.map((post: any) => ({
       name: String(post?.name || ''),
-      count: Number(post?.count) || 1,
+      count: post?.count == null || post?.count === '' ? null : Number(post.count),
       district: post?.district || 'ALL',
       ...(Array.isArray(post?.districts) ? { districts: post.districts } : {}),
       ...(post?.salaryGrade ? { salaryGrade: String(post.salaryGrade) } : {}),
+      ...(post?.salaryText ? { salaryText: String(post.salaryText) } : {}),
       ...(post?.salaryMin != null ? { salaryMin: Number(post.salaryMin) } : {}),
       ...(post?.salaryMax != null ? { salaryMax: Number(post.salaryMax) } : {}),
       ...(post?.applicationFee != null ? { applicationFee: Number(post.applicationFee) } : {}),
@@ -452,7 +453,7 @@ export const AdminJobFormPage: React.FC = () => {
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (!isEdit || !slug) setSlug(generateSlug(val));
+    if (!isEdit || !slug) setSlug(generateSlug(val, jobId));
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -680,7 +681,7 @@ export const AdminJobFormPage: React.FC = () => {
       error('বিজ্ঞপ্তির শিরোনাম পূরণ করুন');
       return;
     }
-    const effectiveSlug = (slug || generateSlug(effectiveTitle) || `job-${Date.now()}`).trim();
+    const effectiveSlug = (slug || generateSlug(effectiveTitle, jobId) || `job-${Date.now()}`).trim();
     if (!slug) setSlug(effectiveSlug);
 
     setSaving(true);
@@ -690,10 +691,11 @@ export const AdminJobFormPage: React.FC = () => {
         .map((p) => {
           const item: any = {
             name: p.name.trim(),
-            count: Number(p.count) || 1,
+            count: p.count == null ? null : Number(p.count),
             district: p.district || 'ALL',
           };
           if (p.salaryGrade) item.salaryGrade = p.salaryGrade;
+          if (p.salaryText) item.salaryText = p.salaryText;
           if (p.salaryMin != null) item.salaryMin = Number(p.salaryMin);
           if (p.salaryMax != null) item.salaryMax = Number(p.salaryMax);
           if (Array.isArray(p.districts) && p.districts.length > 0) {

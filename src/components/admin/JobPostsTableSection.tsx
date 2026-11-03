@@ -131,17 +131,31 @@ export const JobPostsTableSection: React.FC<Props> = ({
                   />
                 </div>
 
-                <div className="w-full sm:w-28">
+                <div className="w-full sm:w-36">
                   <label className="block text-[11px] font-semibold text-gray-700 mb-1">
                     পদসংখ্যা
                   </label>
-                  <Input
-                    placeholder="সংখ্যা"
-                    type="number"
-                    value={post.count}
-                    onChange={(e) => onUpdatePost(idx, 'count', Number(e.target.value))}
-                    className="w-full"
-                  />
+                  <div className="flex gap-1.5">
+                    <select
+                      value={post.count == null ? 'unknown' : 'known'}
+                      onChange={(e) => onUpdatePost(idx, 'count', e.target.value === 'unknown' ? null : (post.count == null ? 1 : post.count))}
+                      className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="known">নির্দিষ্ট</option>
+                      <option value="unknown">নির্ধারিত নয়</option>
+                    </select>
+                    {post.count != null && (
+                      <input
+                        aria-label="পদসংখ্যা"
+                        placeholder="সংখ্যা"
+                        type="number"
+                        min="1"
+                        value={post.count}
+                        onChange={(e) => onUpdatePost(idx, 'count', e.target.value === '' ? null : Number(e.target.value))}
+                        className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {posts.length > 1 && (
@@ -270,8 +284,14 @@ export const JobPostsTableSection: React.FC<Props> = ({
               <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 space-y-2">
                 <label className="block text-[11px] font-bold text-emerald-900">এই পদের বেতন গ্রেড ও নির্ধারিত scale</label>
                 <select
-                  value={post.salaryGrade || ''}
+                  value={post.salaryGrade || (post.salaryText ? '__custom__' : '')}
                   onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      onUpdatePost(idx, 'salaryGrade', undefined);
+                      onUpdatePost(idx, 'salaryMin', undefined);
+                      onUpdatePost(idx, 'salaryMax', undefined);
+                      return;
+                    }
                     const selected = salaryScales.find((scale) => scale.grade === e.target.value);
                     onUpdatePost(idx, 'salaryGrade', selected?.grade || undefined);
                     onUpdatePost(idx, 'salaryMin', selected?.minValue);
@@ -280,6 +300,7 @@ export const JobPostsTableSection: React.FC<Props> = ({
                   className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">বেতন গ্রেড নির্বাচন করুন...</option>
+                  <option value="__custom__">গ্রেড প্রযোজ্য নয় / কাস্টম বেতন</option>
                   {salaryScales.map((scale) => (
                     <option key={scale.grade} value={scale.grade}>
                       {scale.grade}{scale.minValue != null || scale.maxValue != null ? ` — ${formatSalary(scale.minValue)}–${formatSalary(scale.maxValue)} টাকা` : ' — scale update বাকি'}
@@ -289,9 +310,29 @@ export const JobPostsTableSection: React.FC<Props> = ({
                 {(post.salaryMin != null || post.salaryMax != null) && (
                   <p className="text-[11px] text-emerald-800 font-semibold">নির্ধারিত scale: {formatSalary(post.salaryMin)}–{formatSalary(post.salaryMax)} টাকা মাসিক</p>
                 )}
-                {post.salaryGrade && post.salaryMin == null && post.salaryMax == null && (
-                  <p className="text-[11px] text-amber-700">এই grade-এর min/max এখনো Admin → বেতন গ্রেড ও স্কেল থেকে আপডেট করা হয়নি।</p>
-                )}
+                  {post.salaryGrade && post.salaryMin == null && post.salaryMax == null && (
+                    <p className="text-[11px] text-amber-700">এই grade-এর min/max এখনো Admin → বেতন গ্রেড ও স্কেল থেকে আপডেট করা হয়নি।</p>
+                  )}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <Input
+                      label="কাস্টম বেতন/স্কেল (ঐচ্ছিক)"
+                      placeholder="যেমন: আলোচনা সাপেক্ষে / ২৫,০০০"
+                      value={post.salaryText || ''}
+                      onChange={(e) => onUpdatePost(idx, 'salaryText', e.target.value || undefined)}
+                    />
+                    <Input
+                      label="কাস্টম সর্বনিম্ন (৳)"
+                      type="number"
+                      value={post.salaryMin ?? ''}
+                      onChange={(e) => onUpdatePost(idx, 'salaryMin', e.target.value === '' ? undefined : Number(e.target.value))}
+                    />
+                    <Input
+                      label="কাস্টম সর্বোচ্চ (৳)"
+                      type="number"
+                      value={post.salaryMax ?? ''}
+                      onChange={(e) => onUpdatePost(idx, 'salaryMax', e.target.value === '' ? undefined : Number(e.target.value))}
+                    />
+                  </div>
               </div>
 
               {/* Row 4: Per-post fee configuration */}
