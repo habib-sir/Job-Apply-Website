@@ -136,7 +136,7 @@ export const AdminJobFormPage: React.FC = () => {
     const nextCategory = allowedCategories.includes(raw.category) ? raw.category : 'govt';
 
     setTitle(String(raw.title).trim());
-    setSlug(String(raw.slug || generateSlug(String(raw.title), jobId)).trim());
+    setSlug(generateSlug(String(raw.slug || raw.title), jobId).trim());
     setCategory(nextCategory);
     setStatus('draft');
     setPublishedAt('');
