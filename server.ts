@@ -475,6 +475,20 @@ async function generateWithGemini(prompt: string, jsonMode: boolean = false): Pr
   throw new Error('AI মডেলটি বর্তমানে ব্যস্ত রয়েছে।');
 }
 
+async function generateWithGeminiImage(prompt: string, imageData: string): Promise<string> {
+  const match = imageData.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/i);
+  if (!match) throw new Error('শুধুমাত্র JPG, PNG বা WebP image গ্রহণযোগ্য');
+  const [, mimeType, data] = match;
+  if (data.length > 10_000_000) throw new Error('ছবিটি সর্বোচ্চ ৭.৫ MB হতে পারবে');
+  const res = await ai.models.generateContent({
+    model: 'gemini-3.1-flash-lite',
+    contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data } }] }],
+    config: { responseMimeType: 'application/json' },
+  });
+  if (!res.text) throw new Error('ছবি থেকে তথ্য পড়া যায়নি');
+  return res.text;
+}
+
 /**
  * Superfast Server-Side Feed Endpoint (Zero Firestore Read Quota Cost for Visitors)
  * Serves millions of visitors directly from server memory / edge CDN in ~5ms.
@@ -1293,6 +1307,22 @@ RESPOND IN PURE JSON (no markdown fences, no \`\`\`json):
   } catch (err: any) {
     console.error('Job extraction error:', err);
     res.status(500).json({ error: err.message || 'এক্সট্রাকশন সম্পন্ন করা যায়নি' });
+  }
+});
+
+/** Circular image OCR + structured JobCircular extraction. */
+app.post('/api/ai/extract-job-image', async (req: Request, res: Response) => {
+  try {
+    const imageData = String(req.body?.imageData || '');
+    if (!imageData) return res.status(400).json({ error: 'Circular image প্রদান করুন' });
+    const prompt = `এই চাকরির circular image-এর বাংলা/ইংরেজি লেখা পড়ে তথ্য যাচাই করে শুধুমাত্র valid JSON দিন। কোনো তথ্য অনুমান করবেন না; অজানা তথ্য null, 0 বা [] রাখুন। প্রতিটি পদ posts array-তে দিন। পদসংখ্যা না থাকলে count:null, সরকারি grade না থাকলে salaryGrade:null এবং বেতন লেখা আকারে থাকলে salaryText ব্যবহার করুন। title, organizationName, deadline, applicationStartDate, applyLink, applicationFee, serviceCharge, posts, content, seoTitle, metaDescription, focusKeyword ও tags পূরণ করুন। SEO super optimized করুন: seoTitle সর্বোচ্চ ৬৫ অক্ষর, metaDescription ১৪০–১৬০ অক্ষর, focusKeyword এবং ৫–৮টি natural tags দিন; keyword stuffing করবেন না। content-এ unique Bengali headings, যোগ্যতা, বেতন, জেলা, তারিখ, fee ও আবেদন পদ্ধতি দিন। applyServiceEnabled:false এবং status:draft রাখুন। JSON-এর বাইরে কোনো লেখা দেবেন না। Structure: {"title":"","slug":"","category":"govt","content":"","deadline":null,"applicationStartDate":null,"applyLink":null,"organizationName":"","employmentType":"","location":{"addressLocality":"বাংলাদেশ","addressRegion":"","streetAddress":"","postalCode":""},"baseSalary":{"grade":null,"currency":"BDT","minValue":null,"maxValue":null,"unitText":"মাসিক"},"applyServiceEnabled":false,"applicationFee":0,"serviceCharge":0,"posts":[{"name":"","count":null,"district":"ALL","districts":[],"salaryGrade":null,"salaryText":"","salaryMin":null,"salaryMax":null,"applicationFee":0,"serviceCharge":0}],"seoTitle":"","metaDescription":"","focusKeyword":"","tags":[],"status":"draft"}`;
+    const raw = (await generateWithGeminiImage(prompt, imageData)).replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed = JSON.parse(raw);
+    if (!parsed.title) return res.status(422).json({ error: 'ছবি থেকে চাকরির শিরোনাম শনাক্ত করা যায়নি' });
+    return res.json(parsed);
+  } catch (err: any) {
+    console.error('Image OCR extraction error:', err);
+    return res.status(500).json({ error: err?.message || 'Circular image পড়া যায়নি' });
   }
 });
 

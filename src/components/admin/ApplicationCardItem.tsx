@@ -165,6 +165,9 @@ export const ApplicationCardItem: React.FC<Props> = ({
             <span>প্রার্থীর সংশোধনের অনুরোধ:</span>
           </span>
           <span>{app.correctionNote}</span>
+          {app.correctionFields && app.correctionFields.length > 0 && (
+            <span className="block mt-1 font-semibold">ভুলের ক্ষেত্র: {app.correctionFields.join(', ')}</span>
+          )}
         </div>
       )}
 

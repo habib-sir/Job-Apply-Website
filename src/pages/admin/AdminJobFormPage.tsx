@@ -117,6 +117,8 @@ export const AdminJobFormPage: React.FC = () => {
   const [aiSourceText, setAiSourceText] = useState('');
   const [aiExtracting, setAiExtracting] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [ocrImageName, setOcrImageName] = useState('');
+  const [ocrExtracting, setOcrExtracting] = useState(false);
 
   const toDateTimeLocal = (value: any) => {
     if (!value) return '';
@@ -211,6 +213,45 @@ export const AdminJobFormPage: React.FC = () => {
     } catch {
       error('Prompt কপি করা যায়নি। Browser clipboard permission যাচাই করুন।');
     }
+  };
+
+  const handleCircularImageOcr = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      error('JPG, PNG বা WebP circular image দিন');
+      return;
+    }
+    if (file.size > 7.5 * 1024 * 1024) {
+      error('OCR image সর্বোচ্চ ৭.৫ MB হতে পারবে');
+      return;
+    }
+    setOcrImageName(file.name);
+    setOcrExtracting(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const res = await fetch('/api/ai/extract-job-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageData: reader.result }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'ছবি পড়া যায়নি');
+        applyImportedJob(data);
+        success('Circular image OCR সম্পন্ন হয়েছে। তথ্য যাচাই করে Draft save করুন।');
+      } catch (err: any) {
+        error(err?.message || 'Circular image OCR ব্যর্থ হয়েছে');
+      } finally {
+        setOcrExtracting(false);
+      }
+    };
+    reader.onerror = () => {
+      setOcrExtracting(false);
+      error('ছবি পড়া যায়নি');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAiAutofill = async () => {
@@ -921,6 +962,20 @@ export const AdminJobFormPage: React.FC = () => {
                 <FileText className="w-3.5 h-3.5" />
                 <span>📝 টেক্সট পেস্ট করুন</span>
               </button>
+            </div>
+
+            <div className="rounded-xl border border-cyan-400/30 bg-cyan-950/30 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold text-cyan-100">🖼️ Circular Image OCR</p>
+                  <p className="text-[11px] text-cyan-200/80">একটি JPG/PNG/WebP পাতা upload করলে লেখা পড়ে JobCircular form auto-fill হবে।</p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-cyan-400 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300">
+                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                  {ocrExtracting ? 'OCR চলছে...' : ocrImageName || 'ছবি বাছুন'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCircularImageOcr} className="hidden" disabled={ocrExtracting} />
+                </label>
+              </div>
             </div>
 
             {/* Input fields */}

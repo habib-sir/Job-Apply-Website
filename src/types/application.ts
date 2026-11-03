@@ -42,6 +42,7 @@ export interface JobApplication {
   softCopyUrl?: string;
   paidCopyUrl?: string;
   correctionNote?: string;
+  correctionFields?: string[];
   rejectReason?: string;
   createdAt: any;
   updatedAt: any;

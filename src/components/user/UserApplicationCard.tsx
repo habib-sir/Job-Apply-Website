@@ -107,6 +107,9 @@ export const UserApplicationCard: React.FC<Props> = ({
         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
           <span className="font-bold block mb-0.5">আপনার পাঠানো সংশোধনের নোট:</span>
           <span>{app.correctionNote}</span>
+          {app.correctionFields && app.correctionFields.length > 0 && (
+            <span className="block mt-1 font-semibold">নির্বাচিত ক্ষেত্র: {app.correctionFields.join(', ')}</span>
+          )}
         </div>
       )}
 

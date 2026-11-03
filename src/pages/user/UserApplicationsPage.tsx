@@ -163,6 +163,7 @@ export const UserApplicationsPage: React.FC = () => {
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [correctionNote, setCorrectionNote] = useState('');
+  const [correctionFields, setCorrectionFields] = useState<string[]>([]);
   const [correctionSaving, setCorrectionSaving] = useState(false);
 
   const { success, error } = useToast();
@@ -215,6 +216,7 @@ export const UserApplicationsPage: React.FC = () => {
     const res = await reviewMyApplication(selectedApp.id, {
       action: 'correction',
       note: correctionNote.trim(),
+      fields: correctionFields,
     });
     setCorrectionSaving(false);
 
@@ -225,6 +227,7 @@ export const UserApplicationsPage: React.FC = () => {
     success('সংশোধনের নোট পাঠানো হয়েছে।');
     setCorrectionModalOpen(false);
     setCorrectionNote('');
+    setCorrectionFields([]);
     setSelectedApp(null);
     fetchApps();
   };
@@ -281,6 +284,8 @@ export const UserApplicationsPage: React.FC = () => {
                 onApproveSoftCopy={handleApproveSoftCopy}
                 onOpenCorrectionModal={(a) => {
                   setSelectedApp(a);
+                  setCorrectionFields([]);
+                  setCorrectionNote('');
                   setCorrectionModalOpen(true);
                 }}
               />
@@ -295,6 +300,19 @@ export const UserApplicationsPage: React.FC = () => {
           <p className="text-xs text-gray-600">
             সফট কপিতে কোন তথ্যটি ভুল হয়েছে তা বিস্তারিত লিখুন যাতে অপারেটর তা সংশোধন করতে পারেন:
           </p>
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+            {['নাম', 'জন্মতারিখ', 'শিক্ষাগত যোগ্যতা', 'জেলা/ঠিকানা', 'ছবি/স্বাক্ষর', 'অন্যান্য'].map((field) => (
+              <label key={field} className="flex items-center gap-2 text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={correctionFields.includes(field)}
+                  onChange={(e) => setCorrectionFields((current) => e.target.checked ? [...current, field] : current.filter((item) => item !== field))}
+                  className="h-3.5 w-3.5 rounded text-emerald-600"
+                />
+                {field}
+              </label>
+            ))}
+          </div>
           <textarea
             rows={4}
             required

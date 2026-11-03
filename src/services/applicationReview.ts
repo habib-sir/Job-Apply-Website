@@ -1,7 +1,9 @@
 import { auth } from './firebase';
 import { WORKER_URL } from './jobsStore';
 
-export type ReviewBody = { action: 'approve' } | { action: 'correction'; note: string };
+export type ReviewBody =
+  | { action: 'approve' }
+  | { action: 'correction'; note: string; fields?: string[] };
 
 /**
  * ব্যবহারকারী নিজের আবেদন যাচাই করেন:
