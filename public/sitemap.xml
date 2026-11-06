@@ -2,14 +2,18 @@
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
     <loc>https://bdjobapply.site/sitemap-static.xml</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-06</lastmod>
   </sitemap>
   <sitemap>
     <loc>https://bdjobapply.site/sitemap-active.xml</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-06</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://bdjobapply.site/sitemap-archive-2026-11.xml</loc>
+    <lastmod>2026-11-06</lastmod>
   </sitemap>
   <sitemap>
     <loc>https://bdjobapply.site/sitemap-archive-2026-10.xml</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-06</lastmod>
   </sitemap>
 </sitemapindex>

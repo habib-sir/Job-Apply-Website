@@ -11,7 +11,7 @@ import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/common/Modal';
 import { HomeUrgentDeadlines } from '../../components/home/HomeUrgentDeadlines';
 import { faqItems } from '../../data/faq';
-import { ArrowRight, Calendar, Sparkles, Award, UserPlus, LogIn, FileText, Send, WalletCards, ShieldCheck, MapPin, Facebook, ExternalLink } from 'lucide-react';
+import { ArrowRight, Calendar, Sparkles, Award, UserPlus, LogIn, FileText, Send, WalletCards, ShieldCheck } from 'lucide-react';
 
 // R2-তে সংরক্ষিত নোটিশ (ছবির URL সহ হতে পারে)
 type ExamItem = ExamNotice & { imageUrl?: string };
@@ -357,37 +357,6 @@ export const HomePage: React.FC = () => {
               </details>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Location and Facebook community */}
-      <section className="max-w-6xl mx-auto px-4" aria-labelledby="contact-community-title">
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="p-6 md:p-7">
-              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">সেবা এলাকা</p>
-              <h2 id="contact-community-title" className="mt-1 text-2xl font-extrabold text-gray-950">বাংলাদেশজুড়ে চাকরির আবেদন সহায়তা</h2>
-              <p className="mt-2 text-sm leading-7 text-gray-700">BD Job Apply একটি বাংলাদেশভিত্তিক অনলাইন service। আপনি দেশের যেকোনো জেলা থেকে circular, CV ও application status পরিচালনা করতে পারবেন। এটি কোনো সরকারি অফিস বা Teletalk-এর physical branch নয়।</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-emerald-900">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5"><MapPin className="h-3.5 w-3.5" aria-hidden="true" /> বাংলাদেশ</span>
-                <a href="/contact" className="rounded-full bg-gray-100 px-3 py-1.5 hover:bg-gray-200">Support ও যোগাযোগ</a>
-              </div>
-            </div>
-            <div className="aspect-[16/7] min-h-[190px] border-t border-gray-100 bg-gray-100">
-              <iframe title="BD Job Apply-এর বাংলাদেশ সেবা এলাকার মানচিত্র" src="https://www.google.com/maps?q=Bangladesh&output=embed" loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="h-full w-full border-0" />
-            </div>
-          </div>
-
-          <aside className="rounded-2xl bg-gradient-to-br from-[#1877F2] to-[#0b4ea2] p-6 text-white shadow-sm md:p-7">
-            <Facebook className="h-8 w-8" aria-hidden="true" />
-            <p className="mt-5 text-xs font-bold uppercase tracking-wide text-blue-100">সর্বশেষ চাকরির আপডেট</p>
-            <h2 className="mt-1 text-2xl font-extrabold">আমাদের Facebook Page-এ যুক্ত থাকুন</h2>
-            <p className="mt-3 text-sm leading-7 text-blue-50">নতুন সরকারি, বেসরকারি ও NGO circular, deadline reminder, আবেদন সহায়তা এবং গুরুত্বপূর্ণ নির্দেশনা Facebook-এ নিয়মিত শেয়ার করা হয়। Page follow করে notification চালু রাখুন।</p>
-            <a href="https://www.facebook.com/bdjobapply.site" target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#0b4ea2] hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-200">
-              Facebook Page দেখুন <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            </a>
-            <p className="mt-4 text-[11px] leading-5 text-blue-100">শুধু official page-এর verified contact ও payment instruction অনুসরণ করুন। PIN, OTP বা password কাউকে দেবেন না।</p>
-          </aside>
         </div>
       </section>
 
