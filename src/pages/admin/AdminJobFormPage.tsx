@@ -10,7 +10,7 @@ import {
 } from '../../services/files';
 import { invalidateCache } from '../../services/cache';
 import { auth } from '../../services/firebase';
-import { WORKER_URL, fetchJobsList, saveJobToWorker, R2_BASE, fetchSalaryScaleConfig } from '../../services/jobsStore';
+import { WORKER_URL, fetchJobsList, saveJobToWorker, R2_BASE, fetchSalaryScaleConfig, getAdminToken } from '../../services/jobsStore';
 import { JobCircular, JobCategory, JobStatus, JobPostItem, SalaryScaleOption } from '../../types';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
@@ -232,9 +232,9 @@ export const AdminJobFormPage: React.FC = () => {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const res = await fetch('/api/ai/extract-job-image', {
+        const res = await fetch(`${WORKER_URL}/api/admin/ai/extract-job-image`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageData: reader.result }),
         });
         const data = await res.json().catch(() => ({}));
