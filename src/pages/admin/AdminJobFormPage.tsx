@@ -314,9 +314,9 @@ export const AdminJobFormPage: React.FC = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-      const res = await fetch('/api/ai/extract-job', {
+      const res = await fetch(`${WORKER_URL}/api/admin/ai/extract-job`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: currentMode === 'url' ? urlVal : undefined,
           rawText: currentMode === 'text' ? textVal : undefined,
