@@ -229,13 +229,32 @@ export const AdminJobFormPage: React.FC = () => {
     }
     setOcrImageName(file.name);
     setOcrExtracting(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
+    const runOcr = async () => {
       try {
+        let imageData: string;
+        try {
+          const bitmap = await createImageBitmap(file);
+          const scale = Math.min(1, 2600 / Math.max(bitmap.width, bitmap.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Canvas unavailable');
+          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          bitmap.close();
+          imageData = canvas.toDataURL('image/jpeg', 0.88);
+        } catch {
+          imageData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('ছবি পড়া যায়নি'));
+            reader.readAsDataURL(file);
+          });
+        }
         const res = await fetch(`${WORKER_URL}/api/admin/ai/extract-job-image`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageData: reader.result }),
+          body: JSON.stringify({ imageData }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'ছবি পড়া যায়নি');
@@ -247,11 +266,10 @@ export const AdminJobFormPage: React.FC = () => {
         setOcrExtracting(false);
       }
     };
-    reader.onerror = () => {
+    runOcr().catch((err: any) => {
       setOcrExtracting(false);
-      error('ছবি পড়া যায়নি');
-    };
-    reader.readAsDataURL(file);
+      error(err?.message || 'ছবি পড়া যায়নি');
+    });
   };
 
   const handleAiAutofill = async () => {
