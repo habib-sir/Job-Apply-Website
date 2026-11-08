@@ -101,6 +101,40 @@ export function getAdminToken(): string {
 
 const toTime = (v: any) => new Date(v || 0).getTime() || 0;
 
+const normalizeIdentityText = (value: any) => String(value || '').trim().toLowerCase()
+  .replace(/[\u200B-\u200D\uFEFF]/g, '')
+  .replace(/[।,;:!?()[\]{}"'`]/g, ' ')
+  .replace(/\s+/g, ' ');
+
+const normalizeIdentityUrl = (value: any) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid'].forEach((key) => url.searchParams.delete(key));
+    url.hash = '';
+    return url.toString().replace(/\/$/, '').toLowerCase();
+  } catch {
+    return normalizeIdentityText(raw).replace(/\/$/, '');
+  }
+};
+
+const identityDate = (value: any) => {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) && time > 0 ? new Date(time).toISOString().slice(0, 10) : '';
+};
+
+/** Circular link-কে primary এবং title+organization+deadline-কে fallback identity ধরা হয়। */
+export function jobDuplicateKey(job: any): string | null {
+  const circular = normalizeIdentityUrl(job?.circularLink || job?.circularFile);
+  if (circular) return `circular:${circular}`;
+  const title = normalizeIdentityText(job?.title);
+  const organization = normalizeIdentityText(job?.organizationName);
+  const deadline = identityDate(job?.deadline);
+  if (title && organization && deadline) return `meta:${title}|${organization}|${deadline}`;
+  return null;
+}
+
 /** পুরো জবের তালিকা Worker-এ পাঠায় (চলমান ও আর্কাইব ভাগ হয়) */
 async function postAllJobs(all: any[]): Promise<void> {
   const token = getAdminToken();
@@ -131,6 +165,13 @@ async function postAllJobs(all: any[]): Promise<void> {
 export async function saveJobToWorker(job: Record<string, any>): Promise<void> {
   const current = await fetchJobsList(true);
   const existing = current.find((j) => j.id === job.id);
+  const key = jobDuplicateKey(job);
+  if (key) {
+    const duplicate = current.find((j) => j.id !== job.id && jobDuplicateKey(j) === key);
+    if (duplicate) {
+      throw new Error(`সম্ভাব্য duplicate circular পাওয়া গেছে: “${duplicate.title || 'একই বিজ্ঞপ্তি'}”। একই circular আবার Save না করে আগের post Edit করুন।`);
+    }
+  }
 
   // undefined মান বাদ দিই, নইলে পুরনো ঠিক মান (যেমন applicationFee) মুছে যায়
   const clean = Object.fromEntries(
